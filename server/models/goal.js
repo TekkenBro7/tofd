@@ -42,6 +42,12 @@ export const Goal = sequelize.define('Goal', {
     allowNull: false,
     defaultValue: '7',
     field: 'periodicity_days'
+  },
+  createdAt: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: DataTypes.NOW,
+    field: 'created_at'
   }
 }, {
   tableName: 'goals',
