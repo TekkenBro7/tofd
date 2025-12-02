@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { authApi } from '../../services/authApi';
 import './HomePage.css';
 
 const HomePage = () => {
@@ -8,86 +8,106 @@ const HomePage = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isRegisterMode, setIsRegisterMode] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
-  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
 
   // Проверяем авторизацию при загрузке
   useEffect(() => {
-    const savedAuth = localStorage.getItem('isAuthenticated');
-    const savedUser = localStorage.getItem('user');
-    
-    // Если пользователь уже авторизован, перенаправляем на главную с контентом
-    if (savedAuth === 'true' && savedUser) {
-      // Ничего не делаем - Layout покажет контент
-    }
+    const checkAuth = async () => {
+      try {
+        if (authApi.isAuthenticated()) {
+          // Токен валиден, ничего не делаем
+        } else if (authApi.getAccessTokenFromStorage()) {
+          // Токен есть, но возможно истек - пытаемся обновить
+          await authApi.getValidAccessToken();
+        }
+      } catch (error) {
+        console.error('Ошибка проверки авторизации:', error);
+      }
+    };
+
+    checkAuth();
   }, []);
 
   // Обработка отправки формы
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
+    setIsLoading(true);
 
-    // Валидация
+    // Базовая валидация на фронтенде
     if (!login.trim() || !password.trim()) {
       setErrorMessage('Пожалуйста, заполните все поля');
+      setIsLoading(false);
       return;
     }
 
     if (login.length < 3) {
       setErrorMessage('Логин должен содержать минимум 3 символа');
+      setIsLoading(false);
       return;
     }
 
     if (password.length < 6) {
       setErrorMessage('Пароль должен содержать минимум 6 символов');
+      setIsLoading(false);
       return;
     }
 
-    if (isRegisterMode) {
-      // Режим регистрации
-      if (password !== confirmPassword) {
-        setErrorMessage('Пароли не совпадают');
-        return;
+    if (isRegisterMode && password !== confirmPassword) {
+      setErrorMessage('Пароли не совпадают');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      let response;
+      if (isRegisterMode) {
+        // Регистрация через бэкенд
+        response = await authApi.register(login, password);
+      } else {
+        // Вход через бэкенд
+        response = await authApi.login(login, password);
       }
 
-      // Проверяем, не занят ли логин
-      const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
-      const userExists = existingUsers.some(user => user.login === login);
-      
-      if (userExists) {
-        setErrorMessage('Пользователь с таким логином уже существует');
-        return;
-      }
+      // Сохраняем accessToken и информацию о пользователе
+      // Refresh token будет в httpOnly cookie
+      authApi.saveAccessToken(response.accessToken);
+      authApi.saveUser(response.user);
 
-      // Сохраняем нового пользователя
-      const newUser = { login, password };
-      const updatedUsers = [...existingUsers, newUser];
-      localStorage.setItem('users', JSON.stringify(updatedUsers));
-      
-      // Авторизуем пользователя
-      localStorage.setItem('user', login);
-      localStorage.setItem('isAuthenticated', 'true');
-      setErrorMessage('');
-      
       // Перезагружаем страницу для обновления Layout
       window.location.reload();
       
-    } else {
-      // Режим входа
-      const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
-      const user = existingUsers.find(user => 
-        user.login === login && user.password === password
-      );
+    } catch (error) {
+      console.error('Auth error:', error);
       
-      if (user) {
-        localStorage.setItem('user', login);
-        localStorage.setItem('isAuthenticated', 'true');
-        setErrorMessage('');
-        
-        // Перезагружаем страницу для обновления Layout
-        window.location.reload();
-      } else {
-        setErrorMessage('Неверный логин или пароль');
+      // Обработка ошибок от бэкенда
+      let message = 'Произошла ошибка. Пожалуйста, попробуйте снова.';
+      
+      if (error.message.includes('уже существует')) {
+        message = 'Пользователь с таким логином уже существует';
+      } else if (error.message.includes('не найден') || error.message.includes('Неверный пароль')) {
+        message = 'Неверный логин или пароль';
+      } else if (error.message) {
+        message = error.message;
       }
+      
+      setErrorMessage(message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Выход из системы
+  const handleLogout = async () => {
+    try {
+      await authApi.logout();
+      authApi.clearAuthData();
+      window.location.reload();
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Все равно очищаем данные на фронтенде
+      authApi.clearAuthData();
+      window.location.reload();
     }
   };
 
@@ -100,15 +120,29 @@ const HomePage = () => {
   };
 
   // Проверяем, авторизован ли пользователь
-  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+  const isAuthenticated = authApi.isAuthenticated();
 
   // Если пользователь авторизован, показываем контент главной страницы
   if (isAuthenticated) {
+    const user = authApi.getUser();
+    
     return (
       <div className="home-content">
+        <div className="user-header">
+          <div className="user-info">
+            <h2>Добро пожаловать, {user.login}!</h2>
+            <button 
+              onClick={handleLogout} 
+              className="logout-button"
+            >
+              Выйти
+            </button>
+          </div>
+        </div>
+        
         <section className="hero-section">
           <div className="hero-content">
-            <h2>Добро пожаловать в Копилку!</h2>
+            <h2>Добро пожаловать в SaveChain!</h2>
             <p>Управляйте своими финансами, ставьте цели и отслеживайте прогресс</p>
           </div>
         </section>
@@ -149,35 +183,6 @@ const HomePage = () => {
             </div>
           </div>
         </section>
-        
-        {/* <section className="quick-stats">
-          <h3>Быстрая статистика</h3>
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-icon">💰</div>
-              <div className="stat-info">
-                <h4>Текущий баланс</h4>
-                <p className="stat-value">0 ₽</p>
-              </div>
-            </div>
-            
-            <div className="stat-card">
-              <div className="stat-icon">🎯</div>
-              <div className="stat-info">
-                <h4>Активных целей</h4>
-                <p className="stat-value">0</p>
-              </div>
-            </div>
-            
-            <div className="stat-card">
-              <div className="stat-icon">🏆</div>
-              <div className="stat-info">
-                <h4>Достижений</h4>
-                <p className="stat-value">0</p>
-              </div>
-            </div>
-          </div>
-        </section> */}
       </div>
     );
   }
@@ -205,6 +210,7 @@ const HomePage = () => {
               onChange={(e) => setLogin(e.target.value)}
               placeholder="Введите логин"
               className="form-input"
+              disabled={isLoading}
             />
           </div>
           
@@ -217,6 +223,7 @@ const HomePage = () => {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Введите пароль"
               className="form-input"
+              disabled={isLoading}
             />
           </div>
           
@@ -230,6 +237,7 @@ const HomePage = () => {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Повторите пароль"
                 className="form-input"
+                disabled={isLoading}
               />
             </div>
           )}
@@ -238,8 +246,12 @@ const HomePage = () => {
             <div className="error-message">{errorMessage}</div>
           )}
           
-          <button type="submit" className="submit-button">
-            {isRegisterMode ? 'Зарегистрироваться' : 'Войти'}
+          <button 
+            type="submit" 
+            className="submit-button"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Загрузка...' : (isRegisterMode ? 'Зарегистрироваться' : 'Войти')}
           </button>
         </form>
         
@@ -252,6 +264,7 @@ const HomePage = () => {
               type="button" 
               onClick={toggleMode} 
               className="mode-toggle"
+              disabled={isLoading}
             >
               {isRegisterMode ? 'Войти' : 'Зарегистрироваться'}
             </button>

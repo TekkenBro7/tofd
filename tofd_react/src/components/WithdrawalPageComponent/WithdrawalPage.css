@@ -1,0 +1,784 @@
+/* WithdrawalPage.css */
+
+.withdrawal-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Общие стили страницы */
+.page-header {
+  background: white;
+  border-radius: 0 0 15px 15px;
+  padding: 20px 30px;
+  margin-bottom: 30px;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-title {
+  color: #2d3748;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.total-saved {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.saved-label {
+  color: #718096;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 5px;
+}
+
+.saved-value {
+  color: #2d3748;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.page-main-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px 40px;
+}
+
+/* Процесс снятия */
+.withdrawal-process {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 30px;
+  margin-bottom: 40px;
+}
+
+@media (max-width: 992px) {
+  .withdrawal-process {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Шаги процесса */
+.process-steps {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 30px;
+  background: white;
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex: 1;
+  padding: 15px;
+  border-radius: 10px;
+  transition: all 0.3s;
+}
+
+.step.active {
+  background: #f0f4ff;
+}
+
+.step.completed .step-number {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.step-number {
+  width: 40px;
+  height: 40px;
+  background: #e2e8f0;
+  color: #718096;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 18px;
+  transition: all 0.3s;
+}
+
+.step-info h3 {
+  color: #2d3748;
+  font-size: 16px;
+  margin-bottom: 5px;
+  font-weight: 600;
+}
+
+.step-info p {
+  color: #718096;
+  font-size: 13px;
+  margin: 0;
+}
+
+/* Форма снятия */
+.withdrawal-form-section {
+  background: white;
+  border-radius: 15px;
+  padding: 30px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.withdrawal-form-section h2 {
+  color: #2d3748;
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+
+.withdrawal-form-section p {
+  color: #718096;
+  margin-bottom: 30px;
+}
+
+/* Шаги формы */
+.form-step {
+  margin-bottom: 30px;
+  padding-bottom: 30px;
+  border-bottom: 2px solid #f7fafc;
+}
+
+.form-step:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.form-step h3 {
+  color: #4a5568;
+  font-size: 18px;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+/* Список целей */
+.goals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.goal-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 15px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.goal-item:hover {
+  border-color: #cbd5e0;
+  background: #f7fafc;
+}
+
+.goal-item.selected {
+  border-color: #667eea;
+  background: #f0f4ff;
+}
+
+.goal-icon {
+  font-size: 24px;
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.goal-info {
+  flex: 1;
+}
+
+.goal-title {
+  color: #2d3748;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.goal-amounts {
+  display: flex;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.saved-amount {
+  color: #48bb78;
+  font-weight: 600;
+}
+
+.total-amount {
+  color: #718096;
+}
+
+.goal-selector {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #cbd5e0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.selected-indicator {
+  color: #667eea;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+/* Секция суммы */
+.amount-section {
+  background: #f7fafc;
+  padding: 20px;
+  border-radius: 10px;
+}
+
+.available-amount {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.available-amount span:first-child {
+  color: #4a5568;
+  font-weight: 500;
+}
+
+.available-value {
+  color: #48bb78;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.amount-input-group {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 10px;
+}
+
+.amount-input-group .form-input {
+  flex: 1;
+}
+
+.max-amount-btn {
+  padding: 12px 20px;
+  background: #e2e8f0;
+  border: 2px solid #cbd5e0;
+  border-radius: 8px;
+  color: #4a5568;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.max-amount-btn:hover:not(:disabled) {
+  background: #cbd5e0;
+  color: #2d3748;
+}
+
+.max-amount-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.amount-hint {
+  color: #718096;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+/* Список карт */
+.cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 15px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.card-item:hover {
+  border-color: #cbd5e0;
+  background: #f7fafc;
+}
+
+.card-item.selected {
+  border-color: #667eea;
+  background: #f0f4ff;
+}
+
+.card-icon {
+  font-size: 24px;
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-info {
+  flex: 1;
+}
+
+.card-number {
+  color: #2d3748;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.card-bank {
+  color: #718096;
+  font-size: 14px;
+}
+
+.card-selector {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #cbd5e0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Сводка операции */
+.withdrawal-summary {
+  background: #f0f4ff;
+  padding: 25px;
+  border-radius: 10px;
+  border: 1px solid #c3dafe;
+  margin: 30px 0;
+}
+
+.withdrawal-summary h4 {
+  color: #4a5568;
+  margin-bottom: 20px;
+  font-size: 18px;
+}
+
+.summary-items {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed #cbd5e0;
+}
+
+.summary-item:last-child {
+  border-bottom: none;
+}
+
+.summary-item span:first-child {
+  color: #718096;
+}
+
+.summary-item span:last-child {
+  color: #2d3748;
+  font-weight: 500;
+}
+
+.summary-item.total {
+  padding-top: 10px;
+  border-top: 2px solid #cbd5e0;
+  margin-top: 5px;
+}
+
+.summary-item.total span:last-child {
+  color: #48bb78;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* Кнопка отправки */
+.submit-button {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.submit-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 14px rgba(102, 126, 234, 0.4);
+}
+
+.submit-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Информационная секция */
+.withdrawal-info-section {
+  background: white;
+  border-radius: 15px;
+  padding: 30px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  align-self: start;
+}
+
+.info-card h3 {
+  color: #2d3748;
+  font-size: 20px;
+  margin-bottom: 20px;
+}
+
+.info-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 25px 0;
+}
+
+.info-list li {
+  color: #4a5568;
+  padding: 10px 0;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.info-list li:last-child {
+  border-bottom: none;
+}
+
+.limits-info {
+  background: #f7fafc;
+  padding: 20px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 25px;
+}
+
+.limits-info h4 {
+  color: #4a5568;
+  margin-bottom: 10px;
+}
+
+.limits-info p {
+  color: #718096;
+  font-size: 14px;
+  margin: 5px 0;
+}
+
+.balance-after-withdrawal {
+  background: #f0fff4;
+  padding: 20px;
+  border-radius: 10px;
+  border: 1px solid #9ae6b4;
+}
+
+.balance-after-withdrawal h4 {
+  color: #22543d;
+  margin-bottom: 10px;
+}
+
+.balance-after-withdrawal p {
+  color: #2d4b3a;
+  margin: 5px 0;
+}
+
+.remaining-amount {
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  color: #48bb78 !important;
+  margin-top: 10px !important;
+}
+
+/* Модальное окно */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content {
+  background: white;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 500px;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 25px 30px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.modal-header h2 {
+  color: #2d3748;
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.close-modal {
+  background: none;
+  border: none;
+  font-size: 28px;
+  color: #a0aec0;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.close-modal:hover {
+  background: #f7fafc;
+  color: #718096;
+}
+
+.modal-body {
+  padding: 30px;
+  text-align: center;
+}
+
+.confirmation-icon {
+  font-size: 48px;
+  margin-bottom: 20px;
+}
+
+.modal-body h3 {
+  color: #2d3748;
+  font-size: 20px;
+  margin-bottom: 25px;
+}
+
+.confirmation-details {
+  background: #f7fafc;
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 25px;
+  text-align: left;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.detail-item:last-child {
+  border-bottom: none;
+}
+
+.detail-item span:first-child {
+  color: #718096;
+  font-weight: 500;
+}
+
+.detail-item span:last-child {
+  color: #2d3748;
+  font-weight: 600;
+}
+
+.transaction-id {
+  font-family: monospace;
+  font-size: 14px;
+  color: #667eea !important;
+}
+
+.confirmation-warning {
+  color: #c53030;
+  background: #fed7d7;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  margin-bottom: 25px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 15px;
+}
+
+.cancel-button {
+  flex: 1;
+  padding: 14px;
+  background: #e2e8f0;
+  color: #4a5568;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.cancel-button:hover {
+  background: #cbd5e0;
+}
+
+.confirm-button {
+  flex: 1;
+  padding: 14px;
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.confirm-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 14px rgba(72, 187, 120, 0.4);
+}
+
+/* История снятий */
+.withdrawal-history {
+  background: white;
+  border-radius: 15px;
+  padding: 30px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.withdrawal-history h3 {
+  color: #2d3748;
+  font-size: 20px;
+  margin-bottom: 20px;
+}
+
+.empty-history {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 15px;
+  opacity: 0.5;
+}
+
+.empty-history p {
+  color: #718096;
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+
+.empty-subtext {
+  font-size: 14px !important;
+  color: #a0aec0 !important;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+  
+  .total-saved {
+    align-items: center;
+  }
+  
+  .process-steps {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .amount-input-group {
+    flex-direction: column;
+  }
+  
+  .max-amount-btn {
+    width: 100%;
+  }
+  
+  .modal-actions {
+    flex-direction: column;
+  }
+  
+  .page-main-content {
+    padding: 0 15px 30px;
+  }
+}

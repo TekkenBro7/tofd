@@ -1,59 +1,37 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './ui/Layout';
 import HomePage from './components/HomePageComponent/HomePage';
 import GoalsPage from './components/GoalsPageComponent/GoalsPage';
 import AchievementsPage from './components/AchievementsPageComponent/AchievementsPage';
 import WithdrawalPage from './components/WithdrawalPageComponent/WithdrawalPage';
 import DepositPage from './components/DepositPageComponent/DepositPage';
+import { authApi } from './services/authApi';
 import './App.css';
 
 // Компонент для защищенных маршрутов
 const ProtectedRoute = ({ children }) => {
-  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
-  return isAuthenticated ? children : <Navigate to="/" />;
-};
-
-// Компонент для проверки аутентификации и обновления состояния
-const AuthWrapper = () => {
-  const navigate = useNavigate();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    const checkAuth = () => {
-      const savedAuth = localStorage.getItem('isAuthenticated');
-      const savedUser = localStorage.getItem('user');
-      setIsAuthenticated(savedAuth === 'true' && !!savedUser);
-    };
-
-    // Проверяем сразу при монтировании
-    checkAuth();
-
-    // Подписываемся на изменения localStorage
-    const handleStorageChange = () => {
-      checkAuth();
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
-
-  // Функция для выхода
-  const handleLogout = () => {
-    localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('user');
-    setIsAuthenticated(false);
-    navigate('/');
-    // Принудительно обновляем страницу для сброса состояния
-    window.location.reload();
-  };
-
-  return (
-    <Layout 
-      isAuthenticated={isAuthenticated}
-      onLogout={handleLogout}
-    />
-  );
+  const { isAuthenticated, accessToken } = authApi.getAuthData();
+  
+  if (!isAuthenticated || !accessToken) {
+    return <Navigate to="/" />;
+  }
+  
+  // Простая проверка срока действия
+  if (!authApi.isTokenValid()) {
+    // Пытаемся обновить токен
+    authApi.refresh().then(data => {
+      authApi.saveAuthData(data);
+      window.location.reload();
+    }).catch(() => {
+      authApi.clearAuthData();
+      return <Navigate to="/" />;
+    });
+    
+    return <div>Обновление сессии...</div>;
+  }
+  
+  return children;
 };
 
 function App() {
@@ -61,13 +39,12 @@ function App() {
     <Router>
       <div className="App">
         <Routes>
-          {/* Все маршруты обернуты в AuthWrapper */}
-          <Route path="/*" element={<AuthWrapper />}>
+          {/* Главный маршрут с Layout */}
+          <Route path="/" element={<Layout />}>
             {/* Главная страница доступна всем */}
             <Route index element={<HomePage />} />
             
             {/* Защищенные маршруты - только для авторизованных пользователей */}
-            {/* Используем относительные пути вместо абсолютных */}
             <Route 
               path="goals" 
               element={

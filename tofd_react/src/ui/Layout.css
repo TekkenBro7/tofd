@@ -7,6 +7,7 @@
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
+/* Однострочный хедер */
 .layout-header.single-line-header {
   background: white;
   box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
@@ -19,10 +20,10 @@
 .header-content {
   display: flex;
   align-items: center;
-  justify-content:stretch;
-  padding: 0 80px;
-  height: 60px;
-  max-width: 2400px;
+  justify-content: space-between;
+  padding: 0 20px;
+  height: 70px; /* Увеличиваем высоту для плашки с уровнем */
+  max-width: 1400px;
   margin: 0 auto;
   width: 100%;
 }
@@ -124,7 +125,7 @@
 .nav-section {
   flex: 1;
   justify-content: center;
-  /* min-width: 300px; */
+  min-width: 300px;
   max-width: 500px;
 }
 
@@ -164,19 +165,88 @@
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
 
-/* Информация о пользователе */
+/* Система уровней и информация о пользователе */
 .user-section {
   flex: 0 0 auto;
-  min-width: 180px;
+  min-width: 280px;
   justify-content: flex-end;
 }
 
 .user-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 15px;
 }
 
+/* Плашка с уровнем */
+.level-display {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #f6e05e 0%, #d69e2e 100%);
+  padding: 8px 12px;
+  border-radius: 10px;
+  box-shadow: 0 3px 10px rgba(214, 158, 46, 0.2);
+}
+
+.level-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 700;
+  color: #744210;
+}
+
+.level-icon {
+  font-size: 14px;
+}
+
+.level-text {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.xp-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 120px;
+}
+
+.xp-progress-bar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.xp-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #744210 0%, #975a16 100%);
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.xp-stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 600;
+  color: #744210;
+}
+
+.current-xp {
+  font-weight: 700;
+}
+
+.xp-to-next {
+  opacity: 0.8;
+}
+
+/* Имя пользователя и кнопка выхода */
 .user-display {
   display: flex;
   align-items: center;
@@ -237,6 +307,49 @@
 
 .status-icon {
   font-size: 14px;
+}
+
+/* Анимация уведомления о XP */
+.xp-notification {
+  position: fixed;
+  top: 100px;
+  right: 20px;
+  background: linear-gradient(135deg, #f6e05e 0%, #d69e2e 100%);
+  color: #744210;
+  padding: 12px 20px;
+  border-radius: 10px;
+  box-shadow: 0 5px 20px rgba(214, 158, 46, 0.3);
+  z-index: 9999;
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+.xp-notification.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.xp-notification-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+}
+
+.xp-icon {
+  font-size: 20px;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.xp-text {
+  font-size: 16px;
 }
 
 /* Основной контент */
@@ -325,6 +438,14 @@
   .logout-btn {
     padding: 6px;
   }
+  
+  .level-display {
+    padding: 6px 10px;
+  }
+  
+  .xp-progress {
+    min-width: 100px;
+  }
 }
 
 @media (max-width: 992px) {
@@ -367,6 +488,24 @@
     justify-content: flex-start;
     padding-bottom: 5px;
   }
+  
+  .user-info {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+  }
+  
+  .level-display {
+    order: 2;
+  }
+  
+  .user-display {
+    order: 1;
+  }
+  
+  .logout-btn {
+    order: 3;
+  }
 }
 
 @media (max-width: 576px) {
@@ -385,6 +524,16 @@
     gap: 5px;
   }
   
+  .level-display {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .xp-progress {
+    min-width: auto;
+  }
+  
   .footer-content {
     grid-template-columns: 1fr;
     text-align: center;
@@ -396,4 +545,75 @@
     gap: 10px;
     text-align: center;
   }
+}
+
+/* Скрыть текст кнопки выхода на очень маленьких экранах */
+@media (max-width: 480px) {
+  .logout-icon {
+    margin-right: 0;
+  }
+  
+  .logout-btn {
+    width: 36px;
+    height: 36px;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .user-display {
+    padding: 6px 8px;
+  }
+  
+  .time-display,
+  .date-display {
+    padding: 4px 8px;
+    font-size: 13px;
+  }
+  
+  .logo-text {
+    font-size: 16px;
+  }
+  
+  .page-title {
+    font-size: 13px;
+  }
+  
+  .level-badge {
+    padding: 3px 8px;
+  }
+  
+  .level-text {
+    font-size: 12px;
+  }
+}
+
+/* Эффекты при наведении для лучшего UX */
+.time-display:hover,
+.date-display:hover {
+  background: #edf2f7;
+  transform: translateY(-1px);
+}
+
+.user-display:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.level-display:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 15px rgba(214, 158, 46, 0.3);
+}
+
+/* Анимации */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.layout-main {
+  animation: fadeIn 0.3s ease;
 }
