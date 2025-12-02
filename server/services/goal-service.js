@@ -1,5 +1,6 @@
 import { models } from '../models/index.js';
 import { ApiError } from '../exceptions/api-error.js';
+import { achievementService } from './achievement-service.js';
 
 
 class GoalService {
@@ -31,6 +32,9 @@ class GoalService {
       deadline: new Date(deadline),
       periodicityDays: this._normalizePeriodicity(periodicityDays)
     });
+
+    // Проверяем и назначаем ачивку FG (первая цель)
+    await achievementService.handleGoalCreated(userId);
 
     return this._mapGoal(goal);
   }

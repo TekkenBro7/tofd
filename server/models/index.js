@@ -1,6 +1,7 @@
 import { sequelize } from '../config/database.js';
 import { DataTypes } from 'sequelize';
 import { Goal } from './goal.js';
+import { UserStats } from './user-stats.js';
 
 
 export const User = sequelize.define('User', {
@@ -48,9 +49,13 @@ JwtToken.belongsTo(User, { foreignKey: 'user_id' });
 User.hasMany(Goal, { foreignKey: 'user_id' });
 Goal.belongsTo(User, { foreignKey: 'user_id' });
 
+User.hasOne(UserStats, { foreignKey: 'user_id' });
+UserStats.belongsTo(User, { foreignKey: 'user_id' });
+
 
 export const models = {
   User,
   JwtToken,
-  Goal
+  Goal,
+  UserStats
 };
