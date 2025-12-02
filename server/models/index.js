@@ -1,5 +1,6 @@
 import { sequelize } from '../config/database.js';
 import { DataTypes } from 'sequelize';
+import { Goal } from './goal.js';
 
 
 export const User = sequelize.define('User', {
@@ -44,8 +45,12 @@ export const JwtToken = sequelize.define('JwtToken', {
 User.hasOne(JwtToken, { foreignKey: 'user_id' });
 JwtToken.belongsTo(User, { foreignKey: 'user_id' });
 
+User.hasMany(Goal, { foreignKey: 'user_id' });
+Goal.belongsTo(User, { foreignKey: 'user_id' });
+
 
 export const models = {
   User,
-  JwtToken
+  JwtToken,
+  Goal
 };
