@@ -26,30 +26,74 @@ const Layout = () => {
 
   // Загружаем данные пользователя при загрузке
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    const savedAuth = localStorage.getItem('isAuthenticated');
-    
-    if (savedAuth === 'true' && savedUser) {
-      setIsAuthenticated(true);
-      setCurrentUser(savedUser);
+    const checkAuth = () => {
+      // Проверяем авторизацию через sessionStorage (из authApi)
+      const accessToken = sessionStorage.getItem('accessToken');
+      const isAuth = sessionStorage.getItem('isAuthenticated') === 'true';
+      const userData = sessionStorage.getItem('user');
       
-      // Загружаем XP и уровень из localStorage
-      const savedXP = parseInt(localStorage.getItem('userXP') || '0');
-      const savedLevel = parseInt(localStorage.getItem('userLevel') || '1');
-      setUserXP(savedXP);
-      setUserLevel(savedLevel);
-      calculateLevelProgress(savedXP, savedLevel);
-    } else {
-      setIsAuthenticated(false);
-      setCurrentUser('');
-      
-      // Если пользователь не авторизован и находится не на главной странице,
-      // перенаправляем на главную
-      if (location.pathname !== '/') {
-        navigate('/');
+      if (isAuth && accessToken && userData) {
+        try {
+          const user = JSON.parse(userData);
+          setIsAuthenticated(true);
+          setCurrentUser(user.login || 'Пользователь');
+          
+          // Загружаем XP и уровень из localStorage (отдельно от auth)
+          const savedXP = parseInt(localStorage.getItem('userXP') || '0');
+          const savedLevel = parseInt(localStorage.getItem('userLevel') || '1');
+          setUserXP(savedXP);
+          setUserLevel(savedLevel);
+          calculateLevelProgress(savedXP, savedLevel);
+        } catch (error) {
+          console.error('Ошибка при разборе данных пользователя:', error);
+          clearAuthData();
+        }
+      } else {
+        setIsAuthenticated(false);
+        setCurrentUser('');
+        
+        // Если пользователь не авторизован и находится не на главной странице,
+        // перенаправляем на главную
+        if (location.pathname !== '/' && location.pathname !== '') {
+          navigate('/');
+        }
       }
-    }
+    };
+
+    checkAuth();
+    
+    // Слушаем изменения в sessionStorage для обновления авторизации
+    const handleStorageChange = (e) => {
+      if (e.key === 'isAuthenticated' || e.key === 'accessToken' || e.key === 'user') {
+        checkAuth();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Также проверяем при изменении пути
+    const unlisten = navigate((location) => {
+      checkAuth();
+    });
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      unlisten?.();
+    };
   }, [location.pathname, navigate]);
+
+  // Функция для очистки данных аутентификации
+  const clearAuthData = () => {
+    sessionStorage.removeItem('accessToken');
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('userXP');
+    localStorage.removeItem('userLevel');
+    setIsAuthenticated(false);
+    setCurrentUser('');
+    setUserXP(0);
+    setUserLevel(1);
+  };
 
   // Функция для расчета прогресса уровня
   const calculateLevelProgress = (xp, level) => {
@@ -66,6 +110,8 @@ const Layout = () => {
 
   // Функция для добавления XP (будет вызываться из других компонентов)
   const addXP = (xpToAdd) => {
+    if (!isAuthenticated) return;
+    
     const newXP = userXP + xpToAdd;
     const newLevel = Math.floor(newXP / XP_PER_LEVEL) + 1;
     
@@ -110,14 +156,15 @@ const Layout = () => {
 
   // Выход из системы
   const handleLogout = () => {
-    localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('user');
-    localStorage.removeItem('userXP');
-    localStorage.removeItem('userLevel');
-    setIsAuthenticated(false);
-    setCurrentUser('');
-    setUserXP(0);
-    setUserLevel(1);
+    // Очищаем все данные
+    clearAuthData();
+    
+    // Вызываем API logout если есть authApi
+    if (window.authApi) {
+      window.authApi.logout().catch(console.error);
+    }
+    
+    // Перенаправляем на главную
     navigate('/');
   };
 
@@ -159,6 +206,9 @@ const Layout = () => {
   // Расчет XP до следующего уровня
   const xpToNextLevel = userLevel * XP_PER_LEVEL - userXP;
 
+  // Определяем, нужно ли показывать навигацию
+  const shouldShowNavigation = isAuthenticated;
+
   return (
     <div className="layout">
       <header className="layout-header single-line-header">
@@ -169,27 +219,10 @@ const Layout = () => {
               <span className="logo-icon">💰</span>
               <span className="logo-text">ТОФД Копилка</span>
             </Link>
-            {/* <div className="current-page-title">
-              <span className="page-title-separator">|</span>
-              <span className="page-title">{getPageTitle()}</span>
-            </div> */}
           </div>
 
-          {/* Время и дата */}
-          {/* <div className="header-section datetime-section">
-            <div className="time-display">
-              <span className="time-icon">🕒</span>
-              <span className="time-text">{formatTime(currentTime)}</span>
-            </div>
-            <div className="date-display">
-              <span className="date-icon">📅</span>
-              <span className="weekday-text">{formatWeekday(currentTime)}</span>
-              <span className="date-text">{formatDate(currentTime)}</span>
-            </div>
-          </div> */}
-
-          {/* Навигация (только для авторизованных) */}
-          {isAuthenticated && (
+          {/* Навигация (только для авторизованных и на соответствующих страницах) */}
+          {shouldShowNavigation && (
             <div className="header-section nav-section">
               <nav className="main-nav">
                 <Link 
@@ -272,7 +305,7 @@ const Layout = () => {
 
       <main className="layout-main">
         {/* Передаем функцию addXP в дочерние компоненты через контекст или пропсы */}
-        <Outlet context={{ addXP }} />
+        <Outlet context={{ addXP, isAuthenticated, userLevel, userXP }} />
       </main>
 
       <footer className="layout-footer">

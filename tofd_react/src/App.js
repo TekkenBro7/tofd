@@ -11,17 +11,20 @@ import './App.css';
 
 // Компонент для защищенных маршрутов
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, accessToken } = authApi.getAuthData();
+  // Используем существующие методы authApi
+  const isAuthenticated = authApi.isAuthenticated();
+  const accessToken = authApi.getAccessTokenFromStorage();
   
   if (!isAuthenticated || !accessToken) {
     return <Navigate to="/" />;
   }
   
   // Простая проверка срока действия
-  if (!authApi.isTokenValid()) {
+  if (!authApi.isTokenValid(accessToken)) {
     // Пытаемся обновить токен
     authApi.refresh().then(data => {
-      authApi.saveAuthData(data);
+      authApi.saveAccessToken(data.accessToken);
+      authApi.saveUser(data.user);
       window.location.reload();
     }).catch(() => {
       authApi.clearAuthData();
