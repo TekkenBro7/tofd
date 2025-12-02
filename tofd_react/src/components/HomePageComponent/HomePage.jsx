@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { authApi } from '../../services/authApi';
 import './HomePage.css';
 
@@ -9,23 +10,13 @@ const HomePage = () => {
   const [isRegisterMode, setIsRegisterMode] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Получаем данные из Layout через контекст
+  const { isAuthenticated, addXP } = useOutletContext() || {};
 
   // Проверяем авторизацию при загрузке
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        if (authApi.isAuthenticated()) {
-          // Токен валиден, ничего не делаем
-        } else if (authApi.getAccessTokenFromStorage()) {
-          // Токен есть, но возможно истек - пытаемся обновить
-          await authApi.getValidAccessToken();
-        }
-      } catch (error) {
-        console.error('Ошибка проверки авторизации:', error);
-      }
-    };
-
-    checkAuth();
+    // Если уже авторизованы, ничего не делаем
   }, []);
 
   // Обработка отправки формы
@@ -34,7 +25,7 @@ const HomePage = () => {
     setErrorMessage('');
     setIsLoading(true);
 
-    // Базовая валидация на фронтенде
+    // Валидация
     if (!login.trim() || !password.trim()) {
       setErrorMessage('Пожалуйста, заполните все поля');
       setIsLoading(false);
@@ -62,36 +53,28 @@ const HomePage = () => {
     try {
       let response;
       if (isRegisterMode) {
-        // Регистрация через бэкенд
+        // Регистрация
         response = await authApi.register(login, password);
       } else {
-        // Вход через бэкенд
+        // Вход
         response = await authApi.login(login, password);
       }
 
       // Сохраняем accessToken и информацию о пользователе
-      // Refresh token будет в httpOnly cookie
       authApi.saveAccessToken(response.accessToken);
       authApi.saveUser(response.user);
+
+      // При регистрации даем начальный XP
+      if (isRegisterMode && addXP) {
+        addXP(50); // 50 XP за регистрацию
+      }
 
       // Перезагружаем страницу для обновления Layout
       window.location.reload();
       
     } catch (error) {
       console.error('Auth error:', error);
-      
-      // Обработка ошибок от бэкенда
-      let message = 'Произошла ошибка. Пожалуйста, попробуйте снова.';
-      
-      if (error.message.includes('уже существует')) {
-        message = 'Пользователь с таким логином уже существует';
-      } else if (error.message.includes('не найден') || error.message.includes('Неверный пароль')) {
-        message = 'Неверный логин или пароль';
-      } else if (error.message) {
-        message = error.message;
-      }
-      
-      setErrorMessage(message);
+      setErrorMessage(error.message || 'Произошла ошибка. Пожалуйста, попробуйте снова.');
     } finally {
       setIsLoading(false);
     }
@@ -105,9 +88,6 @@ const HomePage = () => {
       window.location.reload();
     } catch (error) {
       console.error('Logout error:', error);
-      // Все равно очищаем данные на фронтенде
-      authApi.clearAuthData();
-      window.location.reload();
     }
   };
 
@@ -119,27 +99,12 @@ const HomePage = () => {
     setConfirmPassword('');
   };
 
-  // Проверяем, авторизован ли пользователь
-  const isAuthenticated = authApi.isAuthenticated();
-
   // Если пользователь авторизован, показываем контент главной страницы
   if (isAuthenticated) {
     const user = authApi.getUser();
     
     return (
-      <div className="home-content">
-        <div className="user-header">
-          <div className="user-info">
-            <h2>Добро пожаловать, {user.login}!</h2>
-            <button 
-              onClick={handleLogout} 
-              className="logout-button"
-            >
-              Выйти
-            </button>
-          </div>
-        </div>
-        
+      <div className="home-content">   
         <section className="hero-section">
           <div className="hero-content">
             <h2>Добро пожаловать в SaveChain!</h2>
