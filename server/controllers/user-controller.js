@@ -13,8 +13,10 @@ class UserController {
    */
   async registration(req, res, next) {
     try {
-      const { login, password } = req.body;
-      const userData = await userService.registration(login, password);
+      const userData = await userService.registration(
+        req.body.login,
+        req.body.password
+      );
       
       res.cookie('refreshToken', userData.refreshToken, {
         maxAge: 30 * 24 * 60 * 60 * 1000,
@@ -34,8 +36,10 @@ class UserController {
    */
   async login(req, res, next) {
     try {
-      const { login, password } = req.body;
-      const userData = await userService.login(login, password);
+      const userData = await userService.login(
+        req.body.login,
+        req.body.password
+      );
       
       res.cookie('refreshToken', userData.refreshToken, {
         maxAge: 30 * 24 * 60 * 60 * 1000,

@@ -10,22 +10,58 @@ class UserService {
    * @param {string} login 
    * @param {string} password 
    */
+  validateCredentials(login, password) {
+    if (login === undefined || password === undefined) {
+      throw ApiError.BadRequest(`Поля 'login' и 'password' обязательны`);
+    }
+
+    if (typeof login !== 'string' || typeof password !== 'string') {
+      throw ApiError.BadRequest(`Поля 'login' и 'password' должны быть типа 'string'`);
+    }
+
+    const trimmedLogin = login.trim();
+    const trimmedPassword = password.trim();
+
+    if (trimmedLogin.length < 3) {
+      throw ApiError.BadRequest(`Логин должен содержать минимум 3 символа`);
+    }
+
+    if (trimmedPassword.length < 6) {
+      throw ApiError.BadRequest(`Пароль должен содержать минимум 6 символов`);
+    }
+
+    return { trimmedLogin, trimmedPassword };
+  }
+
+  /**
+   * @returns {{id: number, login: string}}
+   */
+  createUserDto(user) {
+    return {
+      id: user.id,
+      login: user.login
+    };
+  }
+
+  /**
+   * @param {string} login 
+   * @param {string} password 
+   */
   async registration(login, password) {
-    const candidate = await models.User.findOne({ where: {login} });
+    const { trimmedLogin, trimmedPassword } = this.validateCredentials(login, password);
+
+    const candidate = await models.User.findOne({ where: {login: trimmedLogin} });
     if (candidate) {
-      throw ApiError.BadRequest(`Пользователь с логином ${login} уже существует`);
+      throw ApiError.BadRequest(`Пользователь с логином ${trimmedLogin} уже существует`);
     }
 
     const hashPassword = await bcrypt.hash(password, 10);
     const user = await models.User.create({
-      login,
+      login: trimmedLogin,
       password: hashPassword
     });
 
-    const userDto = { 
-      id: user.id,
-      login
-    };
+    const userDto = this.createUserDto(user);
 
     const tokens = jwtTokenService.generateTokens(userDto);
     await jwtTokenService.saveToken(user.id, tokens.refreshToken);
@@ -38,9 +74,11 @@ class UserService {
    * @param {string} password 
    */
   async login(login, password) {
-    const user = await models.User.findOne({ where: {login} });
+    const { trimmedLogin, trimmedPassword } = this.validateCredentials(login, password);
+
+    const user = await models.User.findOne({ where: {login: trimmedLogin} });
     if (!user) {
-      throw ApiError.BadRequest(`Пользователь с логином ${login} не найден`);
+      throw ApiError.BadRequest(`Пользователь с логином ${trimmedLogin} не найден`);
     }
     
     const isPassEquals = await bcrypt.compare(password, user.password);
@@ -48,10 +86,7 @@ class UserService {
       throw ApiError.BadRequest('Неверный пароль');
     }
     
-    const userDto = { 
-      id: user.id,
-      login
-    };
+    const userDto = this.createUserDto(user);
 
     const tokens = jwtTokenService.generateTokens(userDto);
     await jwtTokenService.saveToken(user.id, tokens.refreshToken);
@@ -84,10 +119,7 @@ class UserService {
     }
     
     const user = await models.User.findByPk(userData.id);
-    const userDto = { 
-      id: user.id,
-      login: user.login
-    };
+    const userDto = this.createUserDto(user);
 
     const newAccessToken = jwtTokenService.generateAccessToken(userDto);
     let newRefreshToken = refreshToken;
