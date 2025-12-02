@@ -1,5 +1,5 @@
 import { ApiError } from "../exceptions/api-error.js";
-import { tokenService } from "../services/token-service.js";
+import { jwtTokenService } from "../services/jwt-token-service.js";
 
 
 /**
@@ -25,7 +25,7 @@ export default function (req, res, next) {
       return next(ApiError.UnauthorizedError());
     }
 
-    const userData = tokenService.validateAccessToken(accessToken);
+    const userData = jwtTokenService.validateAccessToken(accessToken);
     if (!userData) {
       return next(ApiError.UnauthorizedError());
     }
