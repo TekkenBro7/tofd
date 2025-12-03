@@ -366,6 +366,114 @@ body {
   font-size: 14px;
 }
 
+/* Стили для формы кошелька */
+.wallet-card {
+  max-width: 500px;
+}
+
+.wallet-button {
+  background: linear-gradient(135deg, #14F195 0%, #00D18C 100%) !important;
+}
+
+.wallet-button:hover {
+  box-shadow: 0 7px 14px rgba(20, 241, 149, 0.4) !important;
+}
+
+.wallet-info {
+  background: #f0f9ff;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 20px 0;
+  border-left: 4px solid #14F195;
+}
+
+.wallet-info h4 {
+  color: #2d3748;
+  margin-bottom: 10px;
+  font-size: 16px;
+}
+
+.wallet-info ul {
+  padding-left: 20px;
+  color: #4a5568;
+  font-size: 14px;
+}
+
+.wallet-info li {
+  margin-bottom: 5px;
+}
+
+.form-hint {
+  display: block;
+  margin-top: 5px;
+  color: #a0aec0;
+  font-size: 12px;
+}
+
+.wallet-panel {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px;
+  border-radius: 15px;
+  margin-bottom: 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  animation: fadeIn 0.5s ease;
+}
+
+.wallet-panel h3 {
+  margin-bottom: 5px;
+  font-size: 18px;
+}
+
+.wallet-panel p {
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.disconnect-button {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.disconnect-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+/* Solana цвета для выделения */
+.solana-green {
+  color: #14F195;
+}
+
+.solana-gradient {
+  background: linear-gradient(135deg, #9945FF 0%, #14F195 100%);
+}
+
+/* Мобильная адаптация */
+@media (max-width: 768px) {
+  .wallet-panel {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+  }
+  
+  .wallet-panel h3 {
+    font-size: 16px;
+  }
+  
+  .disconnect-button {
+    align-self: flex-end;
+  }
+}
+
 /* Адаптивность */
 @media (max-width: 768px) {
   .auth-card {
