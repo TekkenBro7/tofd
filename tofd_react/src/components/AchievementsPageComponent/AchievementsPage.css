@@ -511,6 +511,128 @@
   font-size: 13px;
 }
 
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  color: white;
+}
+
+.loading-spinner .spinner {
+  font-size: 48px;
+  margin-bottom: 20px;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-message {
+  background: rgba(255, 87, 87, 0.1);
+  border: 1px solid #ff5757;
+  color: #ff5757;
+  padding: 15px 20px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.penalty-warning {
+  color: #ff6b6b;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  display: block;
+  padding: 8px;
+  background: rgba(255, 107, 107, 0.1);
+  border-radius: 6px;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button:disabled:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  color: white;
+}
+
+.loading-spinner .spinner {
+  font-size: 48px;
+  margin-bottom: 20px;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-message {
+  background: rgba(255, 87, 87, 0.1);
+  border: 1px solid #ff5757;
+  color: #ff5757;
+  padding: 15px 20px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  text-align: center;
+  font-weight: 500;
+}
+
+.completed-date, .locked-date {
+  color: #718096;
+  font-size: 12px;
+  font-style: italic;
+  text-align: center;
+  display: block;
+  width: 100%;
+}
+
+.achievement-card.locked {
+  opacity: 0.8;
+}
+
+.achievement-card.completed .achievement-icon {
+  background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+}
+
+/* Убираем hover эффект для карточек */
+.achievement-card {
+  cursor: default;
+}
+
+.achievement-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Стили для категории "другие" */
+.category-card:nth-child(5) .category-icon {
+  background: #f7fafc;
+  color: #a0aec0;
+}
+
+/* Информация о рейтинге в info-section */
+.info-section strong {
+  color: #2d3748;
+  font-weight: 700;
+}
+
 /* Адаптивность */
 @media (max-width: 768px) {
   .header-content {
