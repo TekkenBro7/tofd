@@ -15,8 +15,8 @@ export const ACHIEVEMENTS = {
     points: 100
   },
   PG: {
-    name: 'Идеальное завершение',
-    description: 'Достиг цели точно в срок без досрочного вывода',
+    name: 'Первая победа',
+    description: 'Достиг цели точно в срок',
     points: 80
   },
   SV: {
