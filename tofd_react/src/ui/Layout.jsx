@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { achievementsApi } from '../services/achievementsApi'
 import './Layout.css';
 
 const Layout = () => {
@@ -9,6 +10,7 @@ const Layout = () => {
   const [userLevel, setUserLevel] = useState(1);
   const [userXP, setUserXP] = useState(0);
   const [levelProgress, setLevelProgress] = useState(0);
+  const [xpToNextLevel, setXpToNextLevel] = useState(100);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -24,26 +26,22 @@ const Layout = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Загружаем данные пользователя при загрузке
+  // Загружаем данные пользователя и уровень при загрузке
   useEffect(() => {
-    const checkAuth = () => {
-      // Проверяем авторизацию через sessionStorage (из authApi)
+    const checkAuth = async () => {
+      // Проверяем авторизацию через sessionStorage
       const accessToken = sessionStorage.getItem('accessToken');
       const isAuth = sessionStorage.getItem('isAuthenticated') === 'true';
       const userData = sessionStorage.getItem('user');
-      
+
       if (isAuth && accessToken && userData) {
         try {
           const user = JSON.parse(userData);
           setIsAuthenticated(true);
           setCurrentUser(user.login || 'Пользователь');
-          
-          // Загружаем XP и уровень из localStorage (отдельно от auth)
-          const savedXP = parseInt(localStorage.getItem('userXP') || '0');
-          const savedLevel = parseInt(localStorage.getItem('userLevel') || '1');
-          setUserXP(savedXP);
-          setUserLevel(savedLevel);
-          calculateLevelProgress(savedXP, savedLevel);
+
+          // Загружаем уровень и XP с бэкенда
+          await loadUserLevel();
         } catch (error) {
           console.error('Ошибка при разборе данных пользователя:', error);
           clearAuthData();
@@ -51,7 +49,7 @@ const Layout = () => {
       } else {
         setIsAuthenticated(false);
         setCurrentUser('');
-        
+
         // Если пользователь не авторизован и находится не на главной странице,
         // перенаправляем на главную
         if (location.pathname !== '/' && location.pathname !== '') {
@@ -61,7 +59,7 @@ const Layout = () => {
     };
 
     checkAuth();
-    
+
     // Слушаем изменения в sessionStorage для обновления авторизации
     const handleStorageChange = (e) => {
       if (e.key === 'isAuthenticated' || e.key === 'accessToken' || e.key === 'user') {
@@ -70,61 +68,78 @@ const Layout = () => {
     };
 
     window.addEventListener('storage', handleStorageChange);
-    
-    // Также проверяем при изменении пути
-    const unlisten = navigate((location) => {
-      checkAuth();
-    });
 
     return () => {
       window.removeEventListener('storage', handleStorageChange);
-      unlisten?.();
     };
   }, [location.pathname, navigate]);
+
+  // Функция загрузки уровня пользователя с бэкенда
+  const loadUserLevel = async () => {
+    try {
+      if (!isAuthenticated) return;
+
+      const levelData = await achievementsApi.getUserLevel();
+      setUserLevel(levelData.level);
+      setUserXP(levelData.xp);
+      setLevelProgress(levelData.progress);
+      setXpToNextLevel(levelData.xpToNextLevel);
+
+      // Сохраняем в localStorage для быстрого доступа
+      localStorage.setItem('userLevel', levelData.level.toString());
+      localStorage.setItem('userXP', levelData.xp.toString());
+    } catch (error) {
+      console.error('Ошибка загрузки уровня:', error);
+      // Используем значения по умолчанию
+      setUserLevel(1);
+      setUserXP(0);
+      setLevelProgress(0);
+      setXpToNextLevel(100);
+    }
+  };
 
   // Функция для очистки данных аутентификации
   const clearAuthData = () => {
     sessionStorage.removeItem('accessToken');
     sessionStorage.removeItem('user');
     sessionStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('userXP');
     localStorage.removeItem('userLevel');
+    localStorage.removeItem('userXP');
     setIsAuthenticated(false);
     setCurrentUser('');
     setUserXP(0);
     setUserLevel(1);
+    setLevelProgress(0);
   };
 
-  // Функция для расчета прогресса уровня
-  const calculateLevelProgress = (xp, level) => {
-    const xpForCurrentLevel = (level - 1) * XP_PER_LEVEL;
-    const xpInCurrentLevel = xp - xpForCurrentLevel;
-    const progress = (xpInCurrentLevel / XP_PER_LEVEL) * 100;
-    setLevelProgress(Math.min(100, Math.max(0, progress)));
-  };
+  // Функция для добавления XP
+  const addXP = async (xpToAdd) => {
+    if (!isAuthenticated || xpToAdd <= 0) return;
 
-  // Обновляем прогресс при изменении XP или уровня
-  useEffect(() => {
-    calculateLevelProgress(userXP, userLevel);
-  }, [userXP, userLevel]);
+    try {
+      // Обновляем локально для быстрой обратной связи
+      const newXP = userXP + xpToAdd;
+      const newLevel = Math.floor(newXP / XP_PER_LEVEL) + 1;
 
-  // Функция для добавления XP (будет вызываться из других компонентов)
-  const addXP = (xpToAdd) => {
-    if (!isAuthenticated) return;
-    
-    const newXP = userXP + xpToAdd;
-    const newLevel = Math.floor(newXP / XP_PER_LEVEL) + 1;
-    
-    setUserXP(newXP);
-    setUserLevel(newLevel);
-    
-    // Сохраняем в localStorage
-    localStorage.setItem('userXP', newXP.toString());
-    localStorage.setItem('userLevel', newLevel.toString());
-    
-    // Показываем уведомление о получении XP
-    if (xpToAdd > 0) {
+      setUserXP(newXP);
+      setUserLevel(newLevel);
+
+      // Рассчитываем новый прогресс
+      const xpForCurrentLevel = (newLevel - 1) * XP_PER_LEVEL;
+      const xpInCurrentLevel = newXP - xpForCurrentLevel;
+      const progress = (xpInCurrentLevel / XP_PER_LEVEL) * 100;
+      setLevelProgress(progress);
+      setXpToNextLevel(XP_PER_LEVEL - xpInCurrentLevel);
+
+      // Сохраняем в localStorage
+      localStorage.setItem('userLevel', newLevel.toString());
+      localStorage.setItem('userXP', newXP.toString());
+
+      // Показываем уведомление о получении XP
       showXPNotification(xpToAdd);
+
+    } catch (error) {
+      console.error('Ошибка при добавлении XP:', error);
     }
   };
 
@@ -139,17 +154,19 @@ const Layout = () => {
       </div>
     `;
     document.body.appendChild(notification);
-    
+
     // Анимация появления
     setTimeout(() => {
       notification.classList.add('show');
     }, 10);
-    
+
     // Удаление через 3 секунды
     setTimeout(() => {
       notification.classList.remove('show');
       setTimeout(() => {
-        document.body.removeChild(notification);
+        if (notification.parentNode) {
+          document.body.removeChild(notification);
+        }
       }, 300);
     }, 3000);
   };
@@ -158,12 +175,12 @@ const Layout = () => {
   const handleLogout = () => {
     // Очищаем все данные
     clearAuthData();
-    
+
     // Вызываем API logout если есть authApi
     if (window.authApi) {
       window.authApi.logout().catch(console.error);
     }
-    
+
     // Перенаправляем на главную
     navigate('/');
   };
@@ -183,29 +200,6 @@ const Layout = () => {
     return weekday.charAt(0).toUpperCase() + weekday.slice(1);
   };
 
-  const formatDate = (date) => {
-    return date.toLocaleDateString('ru-RU', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    });
-  };
-
-  // Определяем текущую страницу для отображения в заголовке
-  const getPageTitle = () => {
-    const path = location.pathname;
-    switch (path) {
-      case '/goals': return 'Цели';
-      case '/achievements': return 'Достижения';
-      case '/withdrawal': return 'Снятие средств';
-      case '/deposit': return 'Пополнение счета';
-      default: return 'Главная';
-    }
-  };
-
-  // Расчет XP до следующего уровня
-  const xpToNextLevel = userLevel * XP_PER_LEVEL - userXP;
-
   // Определяем, нужно ли показывать навигацию
   const shouldShowNavigation = isAuthenticated;
 
@@ -221,36 +215,36 @@ const Layout = () => {
             </Link>
           </div>
 
-          {/* Навигация (только для авторизованных и на соответствующих страницах) */}
+          {/* Навигация (только для авторизованных) */}
           {shouldShowNavigation && (
             <div className="header-section nav-section">
               <nav className="main-nav">
-                <Link 
-                  to="/" 
+                <Link
+                  to="/"
                   className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
                 >
                   Главная
                 </Link>
-                <Link 
-                  to="/goals" 
+                <Link
+                  to="/goals"
                   className={`nav-link ${location.pathname === '/goals' ? 'active' : ''}`}
                 >
                   Цели
                 </Link>
-                <Link 
-                  to="/achievements" 
+                <Link
+                  to="/achievements"
                   className={`nav-link ${location.pathname === '/achievements' ? 'active' : ''}`}
                 >
                   Достижения
                 </Link>
-                <Link 
-                  to="/deposit" 
+                <Link
+                  to="/deposit"
                   className={`nav-link ${location.pathname === '/deposit' ? 'active' : ''}`}
                 >
                   Пополнение
                 </Link>
-                <Link 
-                  to="/withdrawal" 
+                <Link
+                  to="/withdrawal"
                   className={`nav-link ${location.pathname === '/withdrawal' ? 'active' : ''}`}
                 >
                   Снятие
@@ -271,8 +265,8 @@ const Layout = () => {
                   </div>
                   <div className="xp-progress">
                     <div className="xp-progress-bar">
-                      <div 
-                        className="xp-progress-fill" 
+                      <div
+                        className="xp-progress-fill"
                         style={{ width: `${levelProgress}%` }}
                       ></div>
                     </div>
@@ -282,7 +276,7 @@ const Layout = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Имя пользователя и кнопка выхода */}
                 <div className="user-display">
                   <span className="user-icon">👤</span>
@@ -304,8 +298,8 @@ const Layout = () => {
       </header>
 
       <main className="layout-main">
-        {/* Передаем функцию addXP в дочерние компоненты через контекст или пропсы */}
-        <Outlet context={{ addXP, isAuthenticated, userLevel, userXP }} />
+        {/* Передаем функцию addXP в дочерние компоненты через контекст */}
+        <Outlet context={{ addXP, isAuthenticated, userLevel, userXP, loadUserLevel }} />
       </main>
 
       <footer className="layout-footer">
@@ -314,23 +308,17 @@ const Layout = () => {
             <h3>ТОФД Копилка</h3>
             <p>Ваш личный финансовый помощник для достижения целей</p>
           </div>
-          
-          <div className="footer-section">
-            <h4>Контакты</h4>
-            <p>Email: support@tofd-kopilka.ru</p>
-            <p>Телефон: 8-800-XXX-XX-XX</p>
-          </div>
-          
+
           <div className="footer-section">
             <h4>Система уровней</h4>
             <p>Зарабатывайте XP за достижения и повышайте свой уровень!</p>
-            <p>1 уровень = 100 XP</p>
+            <p>100 XP = 1 уровень</p>
           </div>
         </div>
-        
+
         <div className="footer-bottom">
           <p>© {new Date().getFullYear()} ТОФД Копилка. Все права защищены.</p>
-          <p className="version">Версия 1.1.0 (с системой уровней)</p>
+          <p className="version">Версия 2.0.0 (интеграция с бэкендом)</p>
         </div>
       </footer>
     </div>

@@ -1,150 +1,188 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import { achievementsApi } from '../../services/achievementsApi';
+import { ACHIEVEMENTS_CONFIG, CATEGORIES } from '../../config/achievementsConfig';
 import './AchievementsPage.css';
 
 const AchievementsPage = () => {
   const [achievements, setAchievements] = useState([]);
-  const [currentUser] = useState(localStorage.getItem('user') || '');
-  const { addXP } = useOutletContext();
+  const [userStats, setUserStats] = useState({ rating: '0', achievements: [] });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  // Загружаем достижения из localStorage или используем заглушечные
+  // Получаем данные из Layout через контекст
+  const { isAuthenticated } = useOutletContext() || {};
+
+  // Загружаем достижения и статистику при монтировании
   useEffect(() => {
-    const savedAchievements = JSON.parse(localStorage.getItem('userAchievements') || 'null');
-    
-    if (savedAchievements) {
-      setAchievements(savedAchievements);
+    if (isAuthenticated) {
+      fetchAchievementsData();
     } else {
-      // Инициализируем заглушечные данные
-      const initialAchievements = [
-        {
-          id: 1,
-          title: 'Первая цель',
-          description: 'Создайте свою первую цель для накопления',
-          icon: '🎯',
-          completed: false,
-          xp: 25,
-          category: 'цели'
-        },
-        {
-          id: 2,
-          title: 'Начало пути',
-          description: 'Пополните копилку на 1000 рублей',
-          icon: '💰',
-          completed: false,
-          xp: 50,
-          category: 'пополнения'
-        },
-        {
-          id: 3,
-          title: 'Планировщик',
-          description: 'Создайте 3 цели одновременно',
-          icon: '📋',
-          completed: false,
-          xp: 75,
-          category: 'цели'
-        },
-        {
-          id: 4,
-          title: 'Накопитель',
-          description: 'Соберите общую сумму 10 000 рублей',
-          icon: '🏦',
-          completed: false,
-          xp: 150,
-          category: 'накопления'
-        },
-        {
-          id: 5,
-          title: 'Дисциплинированный',
-          description: 'Настройте автоматическое пополнение',
-          icon: '📅',
-          completed: false,
-          xp: 100,
-          category: 'пополнения'
-        },
-        {
-          id: 6,
-          title: 'Первое снятие',
-          description: 'Снимите деньги для достижения первой цели',
-          icon: '🏆',
-          completed: false,
-          xp: 100,
-          category: 'снятия'
-        },
-        {
-          id: 7,
-          title: 'Стратег',
-          description: 'Достигните 5 целей',
-          icon: '♟️',
-          completed: false,
-          xp: 200,
-          category: 'цели'
-        },
-        {
-          id: 8,
-          title: 'Миллионер',
-          description: 'Накопите 100 000 рублей',
-          icon: '💎',
-          completed: false,
-          xp: 500,
-          category: 'накопления'
-        },
-        {
-          id: 9,
-          title: 'Регулярный вкладчик',
-          description: 'Выполняйте автопополнение 3 месяца подряд',
-          icon: '🔄',
-          completed: false,
-          xp: 150,
-          category: 'пополнения'
-        },
-        {
-          id: 10,
-          title: 'Мастер целей',
-          description: 'Завершите 10 целей',
-          icon: '👑',
-          completed: false,
-          xp: 300,
-          category: 'цели'
-        }
-      ];
-      
-      setAchievements(initialAchievements);
-      localStorage.setItem('userAchievements', JSON.stringify(initialAchievements));
+      setLoading(false);
     }
-  }, []);
+  }, [isAuthenticated]);
 
-  // Сохраняем достижения при изменении
-  useEffect(() => {
-    if (achievements.length > 0) {
-      localStorage.setItem('userAchievements', JSON.stringify(achievements));
+  // Загрузка всех данных
+  const fetchAchievementsData = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      // 1. Загружаем статистику пользователя
+      const stats = await achievementsApi.getUserStats();
+      setUserStats(stats);
+
+      // 2. Преобразуем конфиг достижений в массив (только те, что есть в бэкенде)
+      // const backendAchievements = [
+      //   {
+      //     id: 1,
+      //     code: 'FG',
+      //     name: 'Первая копилка',
+      //     description: 'Создал свою первую цель накопления',
+      //     points: 20,
+      //     icon: '🎯',
+      //     category: 'цели'
+      //   },
+      //   {
+      //     id: 2,
+      //     code: '7D',
+      //     name: 'Недельный стрик',
+      //     description: 'Пополнял копилку 7 дней подряд',
+      //     points: 30,
+      //     icon: '📅',
+      //     category: 'пополнения'
+      //   },
+      //   {
+      //     id: 3,
+      //     code: '30D',
+      //     name: 'Месячный воин',
+      //     description: 'Пополнял копилку 30 дней подряд',
+      //     points: 100,
+      //     icon: '🛡️',
+      //     category: 'пополнения'
+      //   },
+      //   {
+      //     id: 4,
+      //     code: 'PG',
+      //     name: 'Идеальное завершение',
+      //     description: 'Достиг цели точно в срок без досрочного вывода',
+      //     points: 80,
+      //     icon: '⭐',
+      //     category: 'цели'
+      //   },
+      //   {
+      //     id: 5,
+      //     code: 'SV',
+      //     name: 'Спаситель будущего',
+      //     description: 'Успешно завершил 5 и более целей',
+      //     points: 150,
+      //     icon: '🦸',
+      //     category: 'цели'
+      //   },
+      //   {
+      //     id: 6,
+      //     code: 'R100',
+      //     name: 'Легенда дисциплины',
+      //     description: 'Достиг рейтинга 100 и выше',
+      //     points: 300,
+      //     icon: '👑',
+      //     category: 'рейтинг'
+      //   },
+      //   {
+      //     id: 7,
+      //     code: 'R500',
+      //     name: 'Абсолютный мастер',
+      //     description: 'Достиг рейтинга 500',
+      //     points: 1000,
+      //     icon: '💎',
+      //     category: 'рейтинг'
+      //   },
+      //   {
+      //     id: 8,
+      //     code: 'EW',
+      //     name: 'Сорвался',
+      //     description: 'Снял деньги до достижения цели (штрафная)',
+      //     points: -25,
+      //     icon: '💔',
+      //     category: 'снятия'
+      //   },
+      //   {
+      //     id: 9,
+      //     code: 'FAST',
+      //     name: 'Молниеносный старт',
+      //     description: 'Первый депозит в течение 5 минут после создания цели',
+      //     points: 15,
+      //     icon: '⚡',
+      //     category: 'пополнения'
+      //   },
+      //   {
+      //     id: 10,
+      //     code: 'BIG',
+      //     name: 'Крупный вклад',
+      //     description: 'Один депозит ≥ 5 SOL',
+      //     points: 70,
+      //     icon: '💰',
+      //     category: 'пополнения'
+      //   },
+      //   {
+      //     id: 11,
+      //     code: 'NIGHT',
+      //     name: 'Ночной вкладчик',
+      //     description: 'Депозит сделан с 00:00 до 06:00 по МСК',
+      //     points: 10,
+      //     icon: '🌙',
+      //     category: 'пополнения'
+      //   },
+      //   {
+      //     id: 12,
+      //     code: 'SECRET',
+      //     name: 'Тайная ачивка',
+      //     description: 'Секретное условие',
+      //     points: 100,
+      //     icon: '🔒',
+      //     category: 'другие'
+      //   }
+      // ];
+      const backendAchievements = Object.values(ACHIEVEMENTS_CONFIG);
+
+
+      // 3. Отмечаем выполненные достижения
+      const userAchievementCodes = stats.achievements || [];
+      const updatedAchievements = backendAchievements.map(achievement => ({
+        ...achievement,
+        completed: userAchievementCodes.includes(achievement.code),
+        earnedXP: achievement.points,
+        xp: Math.abs(achievement.points) // для отображения
+      }));
+
+      setAchievements(updatedAchievements);
+
+    } catch (err) {
+      console.error('Ошибка загрузки достижений:', err);
+      setError('Не удалось загрузить достижения. Пожалуйста, попробуйте позже.');
+    } finally {
+      setLoading(false);
     }
-  }, [achievements]);
-
-  // Обработка выполнения достижения
-  const handleCompleteAchievement = (achievementId) => {
-    setAchievements(prev => prev.map(achievement => {
-      if (achievement.id === achievementId && !achievement.completed) {
-        const updated = { ...achievement, completed: true };
-        addXP(updated.xp); // Добавляем XP через контекст
-        return updated;
-      }
-      return achievement;
-    }));
-  };
-
-  const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('ru-RU', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
   };
 
   // Статистика достижений
   const completedCount = achievements.filter(a => a.completed).length;
-  const totalXP = achievements.filter(a => a.completed).reduce((sum, a) => sum + a.xp, 0);
-  const categories = ['цели', 'пополнения', 'снятия', 'накопления'];
+  const totalXP = achievements
+    .filter(a => a.completed)
+    .reduce((sum, a) => sum + Math.max(0, a.points), 0);
+
+  const categories = ['цели', 'пополнения', 'снятия', 'рейтинг', 'другие'];
+
+  if (loading) {
+    return (
+      <div className="achievements-container">
+        <div className="loading-spinner">
+          <div className="spinner">⏳</div>
+          <p>Загрузка достижений...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="achievements-container">
@@ -160,22 +198,32 @@ const AchievementsPage = () => {
               <span className="stat-label">Всего XP:</span>
               <span className="stat-value">{totalXP} XP</span>
             </div>
+            <div className="stat-item">
+              <span className="stat-label">Рейтинг:</span>
+              <span className="stat-value">{userStats.rating || '0'}</span>
+            </div>
           </div>
         </div>
       </header>
-      
+
       <main className="page-main-content">
         <div className="welcome-section">
-          <h2>Достижения {currentUser}!</h2>
+          <h2>Достижения!</h2>
           <p>Выполняйте достижения, чтобы получать опыт и повышать уровень</p>
         </div>
-        
+
+        {error && (
+          <div className="error-message">
+            {error}
+          </div>
+        )}
+
         <div className="achievements-summary">
           <div className="summary-card">
             <div className="summary-icon">🏆</div>
             <div className="summary-info">
               <h3>Система достижений</h3>
-              <p>Каждое выполненное достижение приносит вам очки опыта (XP)</p>
+              <p>Достижения начисляются автоматически при выполнении условий</p>
               <p className="summary-note">100 XP = 1 уровень</p>
             </div>
           </div>
@@ -188,7 +236,7 @@ const AchievementsPage = () => {
             </div>
           </div>
         </div>
-        
+
         {/* Категории достижений */}
         <div className="categories-section">
           <h3>Категории достижений</h3>
@@ -196,22 +244,33 @@ const AchievementsPage = () => {
             {categories.map(category => {
               const categoryAchievements = achievements.filter(a => a.category === category);
               const completedInCategory = categoryAchievements.filter(a => a.completed).length;
-              
+
               return (
                 <div key={category} className="category-card">
                   <div className="category-icon">
                     {category === 'цели' && '🎯'}
                     {category === 'пополнения' && '💰'}
                     {category === 'снятия' && '🏆'}
-                    {category === 'накопления' && '💎'}
+                    {category === 'рейтинг' && '⭐'}
+                    {category === 'другие' && '🔒'}
                   </div>
                   <div className="category-info">
-                    <h4>{category.charAt(0).toUpperCase() + category.slice(1)}</h4>
+                    <h4>
+                      {category === 'цели' && 'Цели'}
+                      {category === 'пополнения' && 'Пополнения'}
+                      {category === 'снятия' && 'Снятия'}
+                      {category === 'рейтинг' && 'Рейтинг'}
+                      {category === 'другие' && 'Другие'}
+                    </h4>
                     <p>{completedInCategory}/{categoryAchievements.length} выполнено</p>
                     <div className="category-progress">
-                      <div 
-                        className="category-progress-fill" 
-                        style={{ width: `${(completedInCategory / categoryAchievements.length) * 100}%` }}
+                      <div
+                        className="category-progress-fill"
+                        style={{
+                          width: `${categoryAchievements.length > 0
+                            ? (completedInCategory / categoryAchievements.length) * 100
+                            : 0}%`
+                        }}
                       ></div>
                     </div>
                   </div>
@@ -220,15 +279,14 @@ const AchievementsPage = () => {
             })}
           </div>
         </div>
-        
+
         <div className="achievements-list">
           <h3>Все достижения</h3>
           <div className="achievements-grid">
             {achievements.map((achievement) => (
-              <div 
-                key={achievement.id} 
+              <div
+                key={achievement.id}
                 className={`achievement-card ${achievement.completed ? 'completed' : 'locked'}`}
-                onClick={() => !achievement.completed && handleCompleteAchievement(achievement.id)}
               >
                 <div className="achievement-header">
                   <div className="achievement-icon">{achievement.icon}</div>
@@ -242,70 +300,77 @@ const AchievementsPage = () => {
                     )}
                   </div>
                 </div>
-                
+
                 <div className="achievement-body">
-                  <h4>{achievement.title}</h4>
+                  <h4>{achievement.name}</h4>
                   <p className="achievement-description">{achievement.description}</p>
-                  
+
                   <div className="achievement-category">
                     <span className="category-tag">{achievement.category}</span>
                   </div>
-                  
+
                   {achievement.completed ? (
                     <div className="achievement-completed-info">
                       <div className="xp-earned">
                         <span className="xp-icon">✨</span>
-                        <span className="xp-amount">+{achievement.xp} XP</span>
+                        <span className="xp-amount">
+                          {achievement.points >= 0 ? '+' : ''}{achievement.points} XP
+                        </span>
                       </div>
+                      <p className="hint-text">Получено автоматически</p>
                     </div>
                   ) : (
                     <div className="achievement-locked">
                       <div className="xp-to-earn">
                         <span className="xp-icon">⭐</span>
-                        <span className="xp-amount">{achievement.xp} XP</span>
+                        <span className="xp-amount">
+                          {achievement.points >= 0 ? '+' : ''}{achievement.points} XP
+                        </span>
                       </div>
-                      <p className="hint-text">Нажмите, чтобы выполнить</p>
+                      <p className="hint-text">
+                        {achievement.points < 0
+                          ? 'Штрафное достижение'
+                          : 'Выполните условие для получения'}
+                      </p>
                     </div>
                   )}
                 </div>
-                
+
                 <div className="achievement-footer">
                   {achievement.completed ? (
-                    <span className="completed-date">Достижение получено</span>
+                    <span className="completed-date">Достижение получено автоматически</span>
                   ) : (
-                    <button 
-                      className="complete-button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCompleteAchievement(achievement.id);
-                      }}
-                    >
-                      Получить {achievement.xp} XP
-                    </button>
+                    <span className="locked-date">
+                      {achievement.points >= 0
+                        ? 'Выполните условие'
+                        : 'Штрафное достижение'}
+                    </span>
                   )}
                 </div>
               </div>
             ))}
           </div>
         </div>
-        
+
         <div className="info-section">
           <h3>Как работают достижения?</h3>
           <div className="info-card">
             <p>
-              Достижения помогают сохранять мотивацию и следить за своим прогрессом в накоплении средств. 
-              Выполняйте условия для получения достижений и зарабатывайте очки опыта (XP).
+              Достижения помогают сохранять мотивацию и следить за своим прогрессом в накоплении средств.
+              Все достижения начисляются автоматически при выполнении условий в процессе использования приложения.
             </p>
             <ul className="info-list">
-              <li>✅ За каждое достижение вы получаете определенное количество XP</li>
+              <li>✅ Достижения начисляются автоматически</li>
+              <li>✅ За каждое достижение вы получаете очки опыта (XP)</li>
               <li>✅ 100 XP = 1 уровень</li>
               <li>✅ Уровень отображается в хедере рядом с вашим именем</li>
-              <li>✅ Достижения обновляются автоматически при выполнении условий</li>
-              <li>✅ Некоторые достижения можно выполнить несколько раз</li>
+              <li>⚠️ Некоторые достижения могут быть штрафными (отнимают XP)</li>
             </ul>
-            
+
             <div className="levels-info">
               <h4>Система уровней:</h4>
+              <p>Ваш текущий рейтинг: <strong>{userStats.rating || '0'}</strong> XP</p>
+              <p>Ваш текущий уровень: <strong>{Math.floor(parseInt(userStats.rating || '0') / 100) + 1}</strong></p>
               <div className="levels-grid">
                 <div className="level-example">
                   <span className="level-number">Ур. 1</span>
