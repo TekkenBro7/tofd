@@ -86,6 +86,22 @@ class UserController {
       next(error);
     }
   }
+
+  /**
+   * @param {Request} req
+   * @param {Response} res
+   * @param {NextFunction} next
+   */
+  async setWallet(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const userDto = await userService.setWallet(userId, req.body.walletAddress);
+      
+      return res.json(userDto);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export const userController = new UserController();
