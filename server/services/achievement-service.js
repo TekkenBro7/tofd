@@ -129,20 +129,19 @@ class AchievementService {
   /**
    * Увеличиваем счетчик завершенных целей и проверяем SV/PG
    * @param {number} userId
-   * @param {{ ideal?: boolean }} options
    */
-  async handleGoalCompleted(userId, options = {}) {
+  async handleGoalCompleted(userId) {
     const stats = await this._getOrCreateStats(userId);
 
     stats.completedGoals = (stats.completedGoals || 0) + 1;
     await stats.save();
 
-    if (stats.completedGoals >= 5) {
-      await this.addAchievement(userId, 'SV');
+    if (stats.completedGoals === 1) {
+      await this.addAchievement(userId, 'PG');
     }
 
-    if (options.ideal) {
-      await this.addAchievement(userId, 'PG');
+    if (stats.completedGoals >= 5) {
+      await this.addAchievement(userId, 'SV');
     }
 
     return this.getStats(userId);
