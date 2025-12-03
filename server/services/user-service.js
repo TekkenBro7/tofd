@@ -44,6 +44,17 @@ class UserService {
   }
 
   /**
+   * @returns {{id: number, login: string, walletAddress: string|null}}
+   */
+  createUserResponseDto(user) {
+    return {
+      id: user.id,
+      login: user.login,
+      walletAddress: user.walletAddress
+    };
+  }
+
+  /**
    * @param {string} login 
    * @param {string} password 
    */
@@ -62,11 +73,12 @@ class UserService {
     });
 
     const userDto = this.createUserDto(user);
+    const userResponse = this.createUserResponseDto(user);
 
     const tokens = jwtTokenService.generateTokens(userDto);
     await jwtTokenService.saveToken(user.id, tokens.refreshToken);
 
-    return { ...tokens, user: userDto };
+    return { ...tokens, user: userResponse };
   }
 
   /**
@@ -87,11 +99,58 @@ class UserService {
     }
     
     const userDto = this.createUserDto(user);
+    const userResponse = this.createUserResponseDto(user);
 
     const tokens = jwtTokenService.generateTokens(userDto);
     await jwtTokenService.saveToken(user.id, tokens.refreshToken);
 
-    return { ...tokens, user: userDto };
+    return { ...tokens, user: userResponse };
+  }
+
+  /**
+   * @param {number} userId 
+   * @param {string} walletAddress 
+   */
+  async setWallet(userId, walletAddress) {
+    if (!walletAddress || typeof walletAddress !== 'string') {
+      throw ApiError.BadRequest('Адрес кошелька обязателен');
+    }
+
+    if (walletAddress.length !== 44) {
+      throw ApiError.BadRequest('Адрес кошелька Solana должен содержать 44 символа');
+    }
+
+    const existingUser = await models.User.findOne({ 
+      where: { 
+        walletAddress: walletAddress,
+        id: { $ne: userId } 
+      } 
+    });
+
+    if (existingUser) {
+      throw ApiError.BadRequest('Этот кошелек уже привязан к другому пользователю');
+    }
+
+    const user = await models.User.findByPk(userId);
+    if (!user) {
+      throw ApiError.UnauthorizedError();
+    }
+
+    await user.update({ walletAddress: walletAddress });
+    
+    return this.createUserResponseDto(user);
+  }
+
+  /**
+   * @param {number} userId 
+   */
+  async getUserById(userId) {
+    const user = await models.User.findByPk(userId);
+    if (!user) {
+      throw ApiError.UnauthorizedError();
+    }
+    
+    return this.createUserResponseDto(user);
   }
 
   /**
@@ -120,6 +179,7 @@ class UserService {
     
     const user = await models.User.findByPk(userData.id);
     const userDto = this.createUserDto(user);
+    const userResponse = this.createUserResponseDto(user);
 
     const newAccessToken = jwtTokenService.generateAccessToken(userDto);
     let newRefreshToken = refreshToken;
@@ -132,7 +192,7 @@ class UserService {
     return { 
       accessToken: newAccessToken, 
       refreshToken: newRefreshToken, 
-      user: userDto 
+      user: userResponse 
     };
   }
 }

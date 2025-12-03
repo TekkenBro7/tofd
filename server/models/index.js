@@ -18,6 +18,12 @@ export const User = sequelize.define('User', {
   password: {
     type: DataTypes.STRING(64),
     allowNull: false
+  },
+  walletAddress: {
+    type: DataTypes.STRING(44),
+    allowNull: true,
+    field: 'wallet_address',
+    defaultValue: null
   }
 }, {
   tableName: 'users',
