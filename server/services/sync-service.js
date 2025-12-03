@@ -21,7 +21,7 @@ class SyncService {
 
     const { amount } = await solanaService.verifySignature(signature);
 
-    const stats = await achievementService.handleDeposit(userId);
+    let stats = await achievementService.handleDeposit(userId);
 
     const lamportsToAdd = BigInt(amount); 
     
@@ -39,6 +39,7 @@ class SyncService {
 
     if (goalReached) {
       updateData.status = 'completed';
+      stats = await achievementService.handleGoalCompleted(userId);
     }
 
     await Goal.update(
@@ -47,7 +48,7 @@ class SyncService {
     );
 
     return {
-      isCompleted: goalReached ? 'true' : 'false',
+      isCompleted: goalReached,
       rating: stats.rating,
       achievements: stats.achievements
     };
@@ -82,7 +83,7 @@ class SyncService {
     const isCompleted = !activeGoal || activeGoal.status === 'completed';    
 
     return {
-      isCompleted: isCompleted ? 'true' : 'false',
+      isCompleted: isCompleted,
       rating: stats.rating,
       achievements: stats.achievements
     };
