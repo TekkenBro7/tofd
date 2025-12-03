@@ -11,15 +11,104 @@ const HomePage = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
+  // Новые состояния для кошелька
+  const [walletAddress, setWalletAddress] = useState('');
+  const [showWalletForm, setShowWalletForm] = useState(false);
+  const [isWalletLoading, setIsWalletLoading] = useState(false);
+  const [walletError, setWalletError] = useState('');
+  
   // Получаем данные из Layout через контекст
   const { isAuthenticated, addXP } = useOutletContext() || {};
 
-  // Проверяем авторизацию при загрузке
+  // Проверяем авторизацию и наличие кошелька при загрузке
   useEffect(() => {
-    // Если уже авторизованы, ничего не делаем
-  }, []);
+    if (isAuthenticated) {
+      checkWalletExists();
+    }
+  }, [isAuthenticated]);
 
-  // Обработка отправки формы
+  // Проверка, сохранен ли уже кошелек
+  const checkWalletExists = () => {
+    const savedWallet = localStorage.getItem('solana_wallet');
+    if (!savedWallet) {
+      setShowWalletForm(true);
+    } else {
+      setWalletAddress(savedWallet);
+      setShowWalletForm(false);
+    }
+  };
+
+  // Обработка подключения кошелька
+  const handleConnectWallet = async (e) => {
+    e.preventDefault();
+    setWalletError('');
+    setIsWalletLoading(true);
+
+    // Базовая валидация адреса Solana (44 символа)
+    if (!walletAddress.trim()) {
+      setWalletError('Введите адрес кошелька');
+      setIsWalletLoading(false);
+      return;
+    }
+
+    if (walletAddress.length !== 44) {
+      setWalletError('Адрес Solana кошелька должен содержать 44 символа');
+      setIsWalletLoading(false);
+      return;
+    }
+
+    // Проверка формата (обычно Base58)
+    const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{44}$/;
+    if (!base58Regex.test(walletAddress)) {
+      setWalletError('Неверный формат адреса Solana кошелька');
+      setIsWalletLoading(false);
+      return;
+    }
+
+    try {
+      // Сохраняем в localStorage
+      localStorage.setItem('solana_wallet', walletAddress);
+      
+      // Также можно сохранить с привязкой к пользователю
+      const user = authApi.getUser();
+      if (user && user.id) {
+        localStorage.setItem(`solana_wallet_${user.id}`, walletAddress);
+      }
+      
+      // Показываем уведомление об успехе
+      alert('✅ Кошелек успешно подключен!');
+      
+      // Даем XP за подключение кошелька
+      if (addXP) {
+        addXP(100); // 100 XP за подключение кошелька
+      }
+      
+      // Скрываем форму
+      setShowWalletForm(false);
+      
+    } catch (error) {
+      console.error('Ошибка при сохранении кошелька:', error);
+      setWalletError('Произошла ошибка при сохранении кошелька');
+    } finally {
+      setIsWalletLoading(false);
+    }
+  };
+
+  // Отключение кошелька
+  const handleDisconnectWallet = () => {
+    if (window.confirm('Вы уверены, что хотите отключить кошелек?')) {
+      localStorage.removeItem('solana_wallet');
+      const user = authApi.getUser();
+      if (user && user.id) {
+        localStorage.removeItem(`solana_wallet_${user.id}`);
+      }
+      setWalletAddress('');
+      setShowWalletForm(true);
+      alert('Кошелек отключен');
+    }
+  };
+
+  // Обработка отправки формы (регистрация/вход)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
@@ -99,12 +188,101 @@ const HomePage = () => {
     setConfirmPassword('');
   };
 
-  // Если пользователь авторизован, показываем контент главной страницы
-  if (isAuthenticated) {
+  // Если пользователь авторизован, но у него нет кошелька
+  if (isAuthenticated && showWalletForm) {
     const user = authApi.getUser();
     
     return (
+      <div className="auth-container">
+        <div className="auth-card wallet-card">
+          <div className="auth-header">
+            <h1>Подключите Solana кошелек</h1>
+            <p className="auth-subtitle">
+              Для использования всех функций приложения необходимо подключить Solana кошелек
+            </p>
+          </div>
+          
+          <form onSubmit={handleConnectWallet} className="auth-form">
+            <div className="form-group">
+              <label htmlFor="walletAddress">Адрес Solana кошелька</label>
+              <input
+                type="text"
+                id="walletAddress"
+                value={walletAddress}
+                onChange={(e) => setWalletAddress(e.target.value)}
+                placeholder="Введите ваш адрес Solana кошелька (44 символа)"
+                className="form-input"
+                disabled={isWalletLoading}
+              />
+              <small className="form-hint">
+                Пример: DgG8zUQ1J2p4qR7sT9wXyZ3aB6cE5dF2gH4jK7mL8nP9qR3sT
+              </small>
+            </div>
+            
+            {walletError && (
+              <div className="error-message">{walletError}</div>
+            )}
+            
+            <div className="wallet-info">
+              <h4>Как получить адрес кошелька?</h4>
+              <ul>
+                <li>1. Установите Phantom или Sollet кошелек</li>
+                <li>2. Скопируйте адрес кошелька из приложения</li>
+                <li>3. Вставьте его в поле выше</li>
+              </ul>
+            </div>
+            
+            <button 
+              type="submit" 
+              className="submit-button wallet-button"
+              disabled={isWalletLoading}
+            >
+              {isWalletLoading ? 'Подключение...' : 'Подключить кошелек'}
+            </button>
+            
+            <button 
+              type="button" 
+              onClick={handleLogout}
+              className="logout-button"
+              style={{
+                background: 'transparent',
+                color: '#667eea',
+                border: '1px solid #667eea',
+                marginTop: '10px',
+                width: '100%'
+              }}
+            >
+              Выйти из аккаунта
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  // Если пользователь авторизован и имеет кошелек, показываем контент главной страницы
+  if (isAuthenticated) {
+    const user = authApi.getUser();
+    const savedWallet = localStorage.getItem('solana_wallet');
+    
+    return (
       <div className="home-content">   
+        {/* Панель с информацией о кошельке */}
+        <div className="wallet-panel">
+          <div>
+            <h3 style={{ marginBottom: '5px' }}>Подключен Solana кошелек</h3>
+            <p style={{ fontSize: '14px', opacity: '0.9' }}>
+              {savedWallet ? `${savedWallet.substring(0, 10)}...${savedWallet.substring(34)}` : 'Кошелек не подключен'}
+            </p>
+          </div>
+          <button 
+            onClick={handleDisconnectWallet}
+            className="disconnect-button"
+          >
+            Изменить кошелек
+          </button>
+        </div>
+        
         <section className="hero-section">
           <div className="hero-content">
             <h2>Добро пожаловать в SaveChain!</h2>
@@ -148,11 +326,41 @@ const HomePage = () => {
             </div>
           </div>
         </section>
+        
+        {/* Информация о Solana */}
+        <div className="info-section" style={{
+          background: 'white',
+          padding: '25px',
+          borderRadius: '15px',
+          marginTop: '40px',
+          boxShadow: '0 5px 15px rgba(0,0,0,0.1)'
+        }}>
+          <h3>Информация о Solana кошельке</h3>
+          <p>Ваш кошелек подключен и готов к использованию. Вы можете:</p>
+          <ul className="info-list" style={{ marginTop: '15px', paddingLeft: '20px' }}>
+            <li>✅ Получать депозиты в SOL</li>
+            <li>✅ Отправлять средства на другие кошельки</li>
+            <li>✅ Участвовать в стейкинге</li>
+            <li>✅ Использовать dApps на Solana</li>
+          </ul>
+          <div className="wallet-balance" style={{ 
+            marginTop: '20px', 
+            padding: '15px', 
+            background: '#f8f9fa', 
+            borderRadius: '10px' 
+          }}>
+            <h4>Баланс</h4>
+            <p style={{ fontSize: '24px', fontWeight: 'bold', marginTop: '10px' }}>
+              0.00 SOL
+            </p>
+            <small style={{ color: '#6c757d' }}>Для отображения баланса необходимо интегрировать с блокчейном</small>
+          </div>
+        </div>
       </div>
     );
   }
 
-  // Если пользователь не авторизован, показываем форму
+  // Если пользователь не авторизован, показываем форму входа/регистрации
   return (
     <div className="auth-container">
       <div className="auth-card">
