@@ -1,3 +1,4 @@
+import { syncService } from '../services/sync-service.js';
 import { achievementService } from '../services/achievement-service.js';
 
 
@@ -6,6 +7,40 @@ import { achievementService } from '../services/achievement-service.js';
  */
 
 class SyncController {
+
+  /**
+   * @param {Request} req
+   * @param {Response} res
+   * @param {NextFunction} next
+   */
+  async confirmDeposit(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const { signature } = req.body;
+
+      const result = await syncService.confirmDeposit(userId, signature);
+      return res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * @param {Request} req
+   * @param {Response} res
+   * @param {NextFunction} next
+   */
+  async confirmWithdraw(req, res, next) {
+    try {
+      const userId = req.user.id;
+      const { signature } = req.body;
+
+      const result = await syncService.confirmWithdraw(userId, signature);
+      return res.status(200).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
 
   /**
    * Получить текущие статистики пользователя (рейтинг и ачивки)
