@@ -8,6 +8,9 @@ skip-lint = false
 [programs.localnet]
 savechain = "34wmk1khiTDt4sbzMJ3h93pNYf7H2p95BsTBcBFKLNzh"
 
+[solana]
+max_stack_offset = 8192
+
 [registry]
 url = "https://api.apr.dev"
 
