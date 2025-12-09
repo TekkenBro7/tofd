@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 
-declare_id!("DapEKEk3iZDJneMETERbosL9vqHxqYjziiBmSSXsnJgj");
+declare_id!("3fcaZvjDk3rU6GNDFgSNShCPLNQwsPwqSmGoFM3C3qDF");
 
 #[program]
 pub mod savechain {
@@ -115,6 +115,7 @@ pub struct Withdraw<'info> {
     )]
     pub vault: Account<'info, Vault>,
     
+    /// CHECK: PDA vault для lamports (SystemAccount)
     #[account(mut, seeds = [b"vault", user.key().as_ref()], bump = vault.bump)]
     pub vault_system: UncheckedAccount<'info>,
 
