@@ -8,7 +8,9 @@ import { sequelize } from './config/database.js';
 import { userRouter } from './routers/user-router.js';
 import { goalRouter } from './routers/goal-router.js';
 import { syncRouter } from './routers/sync-router.js';
+import { notificationRouter } from './routers/notification-router.js';
 import { errorMiddleware } from './middlewares/error-middleware.js';
+import { topupReminderJob } from './services/topup-reminder-job.js';
 
 if (process.env.PORT === undefined) {
   console.error('[ERROR] Переименуйте файл ".env.example" в файл ".env"');
@@ -28,6 +30,7 @@ app.use(cookieParser());
 app.use('/api', userRouter);
 app.use('/api', goalRouter);
 app.use('/api', syncRouter);
+app.use('/api', notificationRouter);
 app.use(errorMiddleware);
 
 const start = async () => {
@@ -35,6 +38,7 @@ const start = async () => {
     await sequelize.authenticate();
     await sequelize.sync();
     
+    topupReminderJob.start();
     app.listen(PORT, () => console.log(`Server started on PORT = ${PORT}`));
   } catch (e) {
     console.log(e);
