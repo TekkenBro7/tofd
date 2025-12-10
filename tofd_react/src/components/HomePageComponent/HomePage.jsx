@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { authApi } from '../../services/authApi';
+import { solanaService } from '../../services/solanaService';
+import { contractService } from '../../services/contractService';
 import './HomePage.css';
 
 const HomePage = () => {
@@ -11,100 +13,229 @@ const HomePage = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
-  // Новые состояния для кошелька
+  // Состояния для Phantom кошелька
+  const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState('');
-  const [showWalletForm, setShowWalletForm] = useState(false);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [vaultBalance, setVaultBalance] = useState(0);
+  const [vaultAddress, setVaultAddress] = useState('');
   const [isWalletLoading, setIsWalletLoading] = useState(false);
   const [walletError, setWalletError] = useState('');
+  const [phantomAvailable, setPhantomAvailable] = useState(false);
   
   // Получаем данные из Layout через контекст
   const { isAuthenticated, addXP } = useOutletContext() || {};
 
-  // Проверяем авторизацию и наличие кошелька при загрузке
+  // Проверяем наличие Phantom и авторизацию при загрузке
   useEffect(() => {
+    checkPhantomAvailability();
+    
     if (isAuthenticated) {
-      checkWalletExists();
+      checkWalletConnection();
     }
   }, [isAuthenticated]);
 
-  // Проверка, сохранен ли уже кошелек
-  const checkWalletExists = () => {
-    const savedWallet = localStorage.getItem('solana_wallet');
-    if (!savedWallet) {
-      setShowWalletForm(true);
-    } else {
-      setWalletAddress(savedWallet);
-      setShowWalletForm(false);
+  // Проверка наличия Phantom
+  const checkPhantomAvailability = async () => {
+    try {
+      await solanaService.checkPhantom();
+      setPhantomAvailable(true);
+    } catch (error) {
+      setPhantomAvailable(false);
+      console.warn('Phantom кошелек не найден:', error.message);
     }
   };
 
-  // Обработка подключения кошелька
-  const handleConnectWallet = async (e) => {
-    e.preventDefault();
-    setWalletError('');
-    setIsWalletLoading(true);
-
-    // Базовая валидация адреса Solana (44 символа)
-    if (!walletAddress.trim()) {
-      setWalletError('Введите адрес кошелька');
-      setIsWalletLoading(false);
-      return;
-    }
-
-    if (walletAddress.length !== 44) {
-      setWalletError('Адрес Solana кошелька должен содержать 44 символа');
-      setIsWalletLoading(false);
-      return;
-    }
-
-    // Проверка формата (обычно Base58)
-    const base58Regex = /^[1-9A-HJ-NP-Za-km-z]{44}$/;
-    if (!base58Regex.test(walletAddress)) {
-      setWalletError('Неверный формат адреса Solana кошелька');
-      setIsWalletLoading(false);
-      return;
-    }
-
+  // Проверка подключенного кошелька
+  const checkWalletConnection = async () => {
     try {
-      // Сохраняем в localStorage
-      localStorage.setItem('solana_wallet', walletAddress);
+      setIsWalletLoading(true);
+      const storedWallet = await solanaService.getWalletFromStorage();
       
-      // Также можно сохранить с привязкой к пользователю
-      const user = authApi.getUser();
-      if (user && user.id) {
-        localStorage.setItem(`solana_wallet_${user.id}`, walletAddress);
+      if (storedWallet) {
+        setWalletConnected(true);
+        setWalletAddress(storedWallet.publicKey);
+        
+        // Получаем балансы
+        await updateBalances(storedWallet.publicKey);
+      } else {
+        setWalletConnected(false);
+        setWalletAddress('');
       }
+    } catch (error) {
+      console.error('Ошибка проверки кошелька:', error);
+      setWalletConnected(false);
+    } finally {
+      setIsWalletLoading(false);
+    }
+  };
+
+  // Обновление балансов
+  const updateBalances = async (publicKey) => {
+    try {
+      // Баланс кошелька
+      const balance = await solanaService.getBalance(publicKey);
+      setWalletBalance(balance);
       
-      // Показываем уведомление об успехе
-      alert('✅ Кошелек успешно подключен!');
+      // Баланс копилки
+      const vaultInfo = await solanaService.getVaultBalance(publicKey);
+      if (vaultInfo) {
+        setVaultBalance(vaultInfo.balance);
+        setVaultAddress(vaultInfo.vaultAddress);
+        
+        // Инициализируем контракт сервис
+        await contractService.initializeProvider(window.solana);
+      }
+    } catch (error) {
+      console.error('Ошибка обновления балансов:', error);
+    }
+  };
+
+  // Подключение Phantom кошелька
+  const handleConnectWallet = async () => {
+    try {
+      setWalletError('');
+      setIsWalletLoading(true);
+      
+      const result = await solanaService.connectWallet();
+      
+      setWalletConnected(true);
+      setWalletAddress(result.publicKey);
+      
+      // Обновляем балансы
+      await updateBalances(result.publicKey);
       
       // Даем XP за подключение кошелька
       if (addXP) {
-        addXP(100); // 100 XP за подключение кошелька
+        addXP(100);
       }
       
-      // Скрываем форму
-      setShowWalletForm(false);
+      alert('✅ Кошелек Phantom успешно подключен!');
       
     } catch (error) {
-      console.error('Ошибка при сохранении кошелька:', error);
-      setWalletError('Произошла ошибка при сохранении кошелька');
+      console.error('Ошибка подключения кошелька:', error);
+      setWalletError(error.message || 'Ошибка подключения кошелька');
     } finally {
       setIsWalletLoading(false);
     }
   };
 
   // Отключение кошелька
-  const handleDisconnectWallet = () => {
+  const handleDisconnectWallet = async () => {
     if (window.confirm('Вы уверены, что хотите отключить кошелек?')) {
-      localStorage.removeItem('solana_wallet');
-      const user = authApi.getUser();
-      if (user && user.id) {
-        localStorage.removeItem(`solana_wallet_${user.id}`);
+      try {
+        await solanaService.disconnectWallet();
+        
+        setWalletConnected(false);
+        setWalletAddress('');
+        setWalletBalance(0);
+        setVaultBalance(0);
+        setVaultAddress('');
+        
+        alert('Кошелек отключен');
+      } catch (error) {
+        console.error('Ошибка отключения кошелька:', error);
+        alert('Ошибка при отключении кошелька');
       }
-      setWalletAddress('');
-      setShowWalletForm(true);
-      alert('Кошелек отключен');
+    }
+  };
+
+  // Пополнение копилки
+  const handleDeposit = async (amount) => {
+    try {
+      if (!walletConnected || !walletAddress) {
+        alert('Пожалуйста, подключите кошелек');
+        return;
+      }
+      
+      if (amount <= 0) {
+        alert('Введите корректную сумму');
+        return;
+      }
+      
+      setIsWalletLoading(true);
+      
+      const result = await contractService.deposit(walletAddress, amount);
+      
+      // Обновляем балансы
+      await updateBalances(walletAddress);
+      
+      alert(`✅ Успешно пополнено ${amount} SOL\nТранзакция: ${result.transaction}`);
+      
+      // Даем XP за пополнение
+      if (addXP) {
+        addXP(10);
+      }
+      
+    } catch (error) {
+      console.error('Ошибка пополнения:', error);
+      alert('Ошибка при пополнении: ' + error.message);
+    } finally {
+      setIsWalletLoading(false);
+    }
+  };
+
+  // Вывод из копилки
+  const handleWithdraw = async (amount) => {
+    try {
+      if (!walletConnected || !walletAddress) {
+        alert('Пожалуйста, подключите кошелек');
+        return;
+      }
+      
+      if (amount <= 0 || amount > vaultBalance) {
+        alert('Введите корректную сумму');
+        return;
+      }
+      
+      setIsWalletLoading(true);
+      
+      const result = await contractService.withdraw(walletAddress, amount);
+      
+      // Обновляем балансы
+      await updateBalances(walletAddress);
+      
+      alert(`✅ Успешно выведено ${amount} SOL\nТранзакция: ${result.transaction}`);
+      
+    } catch (error) {
+      console.error('Ошибка вывода:', error);
+      alert('Ошибка при выводе: ' + error.message);
+    } finally {
+      setIsWalletLoading(false);
+    }
+  };
+
+  // Создание копилки если её нет
+  const handleCreateVault = async () => {
+    try {
+      if (!walletConnected || !walletAddress) {
+        alert('Пожалуйста, подключите кошелек');
+        return;
+      }
+      
+      setIsWalletLoading(true);
+      
+      const result = await contractService.createVault(walletAddress);
+      
+      // Получаем информацию о копилке
+      const vaultInfo = await contractService.getVaultInfo(walletAddress);
+      if (vaultInfo) {
+        setVaultBalance(vaultInfo.balance);
+        setVaultAddress(vaultInfo.vaultAddress);
+      }
+      
+      alert(`✅ Копилка создана!\nАдрес: ${result.vaultAddress}`);
+      
+      // Даем XP за создание копилки
+      if (addXP) {
+        addXP(50);
+      }
+      
+    } catch (error) {
+      console.error('Ошибка создания копилки:', error);
+      alert('Ошибка при создании копилки: ' + error.message);
+    } finally {
+      setIsWalletLoading(false);
     }
   };
 
@@ -188,174 +319,218 @@ const HomePage = () => {
     setConfirmPassword('');
   };
 
-  // Если пользователь авторизован, но у него нет кошелька
-  if (isAuthenticated && showWalletForm) {
-    const user = authApi.getUser();
-    
-    return (
-      <div className="auth-container">
-        <div className="auth-card wallet-card">
-          <div className="auth-header">
-            <h1>Подключите Solana кошелек</h1>
-            <p className="auth-subtitle">
-              Для использования всех функций приложения необходимо подключить Solana кошелек
-            </p>
-          </div>
-          
-          <form onSubmit={handleConnectWallet} className="auth-form">
-            <div className="form-group">
-              <label htmlFor="walletAddress">Адрес Solana кошелька</label>
-              <input
-                type="text"
-                id="walletAddress"
-                value={walletAddress}
-                onChange={(e) => setWalletAddress(e.target.value)}
-                placeholder="Введите ваш адрес Solana кошелька (44 символа)"
-                className="form-input"
-                disabled={isWalletLoading}
-              />
-              <small className="form-hint">
-                Пример: DgG8zUQ1J2p4qR7sT9wXyZ3aB6cE5dF2gH4jK7mL8nP9qR3sT
-              </small>
-            </div>
-            
-            {walletError && (
-              <div className="error-message">{walletError}</div>
-            )}
-            
-            <div className="wallet-info">
-              <h4>Как получить адрес кошелька?</h4>
-              <ul>
-                <li>1. Установите Phantom или Sollet кошелек</li>
-                <li>2. Скопируйте адрес кошелька из приложения</li>
-                <li>3. Вставьте его в поле выше</li>
-              </ul>
-            </div>
-            
-            <button 
-              type="submit" 
-              className="submit-button wallet-button"
-              disabled={isWalletLoading}
-            >
-              {isWalletLoading ? 'Подключение...' : 'Подключить кошелек'}
-            </button>
-            
-            <button 
-              type="button" 
-              onClick={handleLogout}
-              className="logout-button"
-              style={{
-                background: 'transparent',
-                color: '#667eea',
-                border: '1px solid #667eea',
-                marginTop: '10px',
-                width: '100%'
-              }}
-            >
-              Выйти из аккаунта
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  // Если пользователь авторизован и имеет кошелек, показываем контент главной страницы
+  // Если пользователь авторизован, показываем главную страницу
   if (isAuthenticated) {
     const user = authApi.getUser();
-    const savedWallet = localStorage.getItem('solana_wallet');
     
     return (
-      <div className="home-content">   
-        {/* Панель с информацией о кошельке */}
-        <div className="wallet-panel">
-          <div>
-            <h3 style={{ marginBottom: '5px' }}>Подключен Solana кошелек</h3>
-            <p style={{ fontSize: '14px', opacity: '0.9' }}>
-              {savedWallet ? `${savedWallet.substring(0, 10)}...${savedWallet.substring(34)}` : 'Кошелек не подключен'}
-            </p>
+      <div className="home-container">
+        <header className="header">
+          <div className="header-content">
+            <h1 className="welcome-title">Добро пожаловать, {user?.login}!</h1>
+            <button onClick={handleLogout} className="logout-button">
+              Выйти
+            </button>
           </div>
-          <button 
-            onClick={handleDisconnectWallet}
-            className="disconnect-button"
-          >
-            Изменить кошелек
-          </button>
-        </div>
-        
-        <section className="hero-section">
-          <div className="hero-content">
-            <h2>Добро пожаловать в SaveChain!</h2>
-            <p>Управляйте своими финансами, ставьте цели и отслеживайте прогресс</p>
-          </div>
-        </section>
-        
-        <section className="features-section">
-          <h3>Доступные функции:</h3>
-          <div className="features-grid">
-            <div className="feature-card">
-              <a href="/achievements" className="feature-link">
-                <div className="feature-icon">📊</div>
-                <h4>Достижения</h4>
-                <p>Просмотр достижений и аналитических данных</p>
-              </a>
+        </header>
+
+        <main className="main-content">
+          {/* Панель подключения Phantom */}
+          <div className="wallet-panel">
+            <div>
+              <h3>Solana Phantom Кошелек</h3>
+              {walletConnected ? (
+                <p>
+                  Подключен: {walletAddress.substring(0, 8)}...{walletAddress.substring(walletAddress.length - 8)}
+                </p>
+              ) : (
+                <p>Кошелек не подключен</p>
+              )}
             </div>
             
-            <div className="feature-card">
-              <a href="/withdrawal" className="feature-link">
-                <div className="feature-icon">📉</div>
-                <h4>Снятие</h4>
-                <p>Снятие денег со счета копилки</p>
-              </a>
-            </div>
-            
-            <div className="feature-card">
-              <a href="/deposit" className="feature-link">
-                <div className="feature-icon">💲</div>
-                <h4>Пополнение</h4>
-                <p>Настройка автоматического пополнения и ручное пополнение счета копилки</p>
-              </a>
-            </div>
-            
-            <div className="feature-card">
-              <a href="/goals" className="feature-link">
-                <div className="feature-icon">📈</div>
-                <h4>Цели</h4>
-                <p>Создание и отслеживание целей</p>
-              </a>
-            </div>
+            {!walletConnected ? (
+              <button 
+                onClick={handleConnectWallet}
+                className="connect-wallet-button"
+                disabled={isWalletLoading || !phantomAvailable}
+              >
+                {isWalletLoading ? 'Подключение...' : 'Подключить Phantom'}
+              </button>
+            ) : (
+              <button 
+                onClick={handleDisconnectWallet}
+                className="disconnect-button"
+                disabled={isWalletLoading}
+              >
+                {isWalletLoading ? '...' : 'Отключить'}
+              </button>
+            )}
           </div>
-        </section>
-        
-        {/* Информация о Solana */}
-        <div className="info-section" style={{
-          background: 'white',
-          padding: '25px',
-          borderRadius: '15px',
-          marginTop: '40px',
-          boxShadow: '0 5px 15px rgba(0,0,0,0.1)'
-        }}>
-          <h3>Информация о Solana кошельке</h3>
-          <p>Ваш кошелек подключен и готов к использованию. Вы можете:</p>
-          <ul className="info-list" style={{ marginTop: '15px', paddingLeft: '20px' }}>
-            <li>✅ Получать депозиты в SOL</li>
-            <li>✅ Отправлять средства на другие кошельки</li>
-            <li>✅ Участвовать в стейкинге</li>
-            <li>✅ Использовать dApps на Solana</li>
-          </ul>
-          <div className="wallet-balance" style={{ 
-            marginTop: '20px', 
-            padding: '15px', 
-            background: '#f8f9fa', 
-            borderRadius: '10px' 
-          }}>
-            <h4>Баланс</h4>
-            <p style={{ fontSize: '24px', fontWeight: 'bold', marginTop: '10px' }}>
-              0.00 SOL
-            </p>
-            <small style={{ color: '#6c757d' }}>Для отображения баланса необходимо интегрировать с блокчейном</small>
+
+          {walletError && (
+            <div className="error-message">{walletError}</div>
+          )}
+
+          {/* Информация о балансах */}
+          {walletConnected && (
+            <div className="balance-section">
+              <div className="balance-card">
+                <h4>Баланс кошелька</h4>
+                <p className="balance-amount">{walletBalance.toFixed(4)} SOL</p>
+                <button 
+                  onClick={() => updateBalances(walletAddress)}
+                  className="refresh-button"
+                  disabled={isWalletLoading}
+                >
+                  Обновить
+                </button>
+              </div>
+              
+              <div className="balance-card">
+                <h4>Баланс копилки</h4>
+                <p className="balance-amount">{vaultBalance.toFixed(4)} SOL</p>
+                {vaultAddress && (
+                  <small className="vault-address">
+                    Адрес: {vaultAddress.substring(0, 10)}...
+                  </small>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Управление копилкой */}
+          {walletConnected && (
+            <div className="vault-management">
+              <h3>Управление копилкой</h3>
+              
+              {!vaultAddress ? (
+                <button 
+                  onClick={handleCreateVault}
+                  className="create-vault-button"
+                  disabled={isWalletLoading}
+                >
+                  {isWalletLoading ? 'Создание...' : 'Создать копилку'}
+                </button>
+              ) : (
+                <div className="vault-controls">
+                  <div className="deposit-control">
+                    <input
+                      type="number"
+                      id="depositAmount"
+                      placeholder="Сумма в SOL"
+                      min="0.0001"
+                      step="0.0001"
+                      className="amount-input"
+                    />
+                    <button 
+                      onClick={() => {
+                        const amount = parseFloat(document.getElementById('depositAmount').value);
+                        handleDeposit(amount);
+                      }}
+                      className="action-button deposit-button"
+                      disabled={isWalletLoading}
+                    >
+                      Пополнить
+                    </button>
+                  </div>
+                  
+                  <div className="withdraw-control">
+                    <input
+                      type="number"
+                      id="withdrawAmount"
+                      placeholder="Сумма в SOL"
+                      min="0.0001"
+                      max={vaultBalance}
+                      step="0.0001"
+                      className="amount-input"
+                    />
+                    <button 
+                      onClick={() => {
+                        const amount = parseFloat(document.getElementById('withdrawAmount').value);
+                        handleWithdraw(amount);
+                      }}
+                      className="action-button withdraw-button"
+                      disabled={isWalletLoading}
+                    >
+                      Вывести
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Основной контент */}
+          <section className="hero-section">
+            <div className="hero-content">
+              <h2>Добро пожаловать в SaveChain!</h2>
+              <p>Управляйте своими финансами, ставьте цели и отслеживайте прогресс</p>
+            </div>
+          </section>
+          
+          <section className="features-section">
+            <h3>Доступные функции:</h3>
+            <div className="features-grid">
+              <div className="feature-card">
+                <a href="/achievements" className="feature-link">
+                  <div className="feature-icon">📊</div>
+                  <h4>Достижения</h4>
+                  <p>Просмотр достижений и аналитических данных</p>
+                </a>
+              </div>
+              
+              <div className="feature-card">
+                <a href="/withdrawal" className="feature-link">
+                  <div className="feature-icon">📉</div>
+                  <h4>Снятие</h4>
+                  <p>Снятие денег со счета копилки</p>
+                </a>
+              </div>
+              
+              <div className="feature-card">
+                <a href="/deposit" className="feature-link">
+                  <div className="feature-icon">💲</div>
+                  <h4>Пополнение</h4>
+                  <p>Настройка автоматического пополнения и ручное пополнение счета копилки</p>
+                </a>
+              </div>
+              
+              <div className="feature-card">
+                <a href="/goals" className="feature-link">
+                  <div className="feature-icon">📈</div>
+                  <h4>Цели</h4>
+                  <p>Создание и отслеживание целей</p>
+                </a>
+              </div>
+            </div>
+          </section>
+          
+          {/* Информация о Solana */}
+          <div className="info-section">
+            <h3>Информация о Solana</h3>
+            <p>Используйте Phantom кошелек для работы с Solana блокчейном</p>
+            <ul className="info-list">
+              <li>✅ Безопасное хранение SOL</li>
+              <li>✅ Быстрые и дешевые транзакции</li>
+              <li>✅ Интеграция со смарт-контрактами</li>
+              <li>✅ Поддержка множества dApps</li>
+            </ul>
+            
+            {!phantomAvailable && (
+              <div className="phantom-install">
+                <h4>Установите Phantom кошелек</h4>
+                <a 
+                  href="https://phantom.app/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="install-button"
+                >
+                  Установить Phantom
+                </a>
+              </div>
+            )}
           </div>
-        </div>
+        </main>
       </div>
     );
   }
