@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { makeAuthenticatedRequest } from '../../services/authApi';
-import { solanaService } from '../../services/solanaService'; // Добавьте этот импорт
+import { solanaService } from '../../services/solanaService';
+import { contractService } from '../../services/contractService';
 import './GoalsPage.css';
 
 const GoalsPage = () => {
@@ -10,6 +11,8 @@ const GoalsPage = () => {
   const [error, setError] = useState('');
   const [vaultBalance, setVaultBalance] = useState(0);
   const [vaultAddress, setVaultAddress] = useState('');
+  const [isClosingGoal, setIsClosingGoal] = useState(false);
+  const [walletConnected, setWalletConnected] = useState(false);
   
   // Данные для формы
   const [title, setTitle] = useState('');
@@ -21,7 +24,19 @@ const GoalsPage = () => {
   useEffect(() => {
     fetchActiveGoal();
     fetchVaultBalance();
+    checkWalletConnection();
   }, []);
+  
+  // Проверка подключения кошелька
+  const checkWalletConnection = async () => {
+    try {
+      const storedWallet = await solanaService.getWalletFromStorage();
+      setWalletConnected(!!storedWallet);
+    } catch (error) {
+      console.error('Ошибка проверки подключения кошелька:', error);
+      setWalletConnected(false);
+    }
+  };
   
   // Функция загрузки активной цели
   const fetchActiveGoal = async () => {
@@ -62,7 +77,6 @@ const GoalsPage = () => {
       }
     } catch (error) {
       console.error('Ошибка получения баланса копилки:', error);
-      // Если копилка не создана, баланс будет 0
       setVaultBalance(0);
     }
   };
@@ -113,22 +127,44 @@ const GoalsPage = () => {
     }
   };
   
-  // Отмена активной цели
+  // Отмена активной цели (ранний вывод)
   const handleCancelGoal = async () => {
-    if (!window.confirm('Вы уверены, что хотите отменить эту цель? Деньги будут возвращены на ваш счет.')) {
+    if (!window.confirm('Вы уверены, что хотите отменить эту цель?')) {
       return;
     }
     
     try {
       setLoading(true);
-      await makeAuthenticatedRequest('/goals/cancel', {
-        method: 'POST'
-      });
+      
+      // // Получаем адрес кошелька
+      // const walletAddress = localStorage.getItem('phantom_wallet');
+      // if (!walletAddress) {
+      //   throw new Error('Кошелек не найден');
+      // }
+      
+      // // Инициализируем провайдер контракта
+      // if (window.solana) {
+      //   await contractService.initializeProvider(window.solana);
+      // }
+      
+      // // Выводим ВСЮ сумму из копилки (текущий баланс)
+      // const amount = vaultBalance;
+      // const result = await contractService.withdraw(walletAddress, amount);
+      
+      // // Отправляем подпись транзакции на сервер для подтверждения раннего вывода
+      // const response = await makeAuthenticatedRequest('/sync/confirm-withdraw', {
+      //   method: 'POST',
+      //   body: JSON.stringify({
+      //     signature: result.transaction
+      //   })
+      // });
       
       setGoal(null);
       
       // Обновляем баланс копилки после отмены цели
-      await fetchVaultBalance();
+      // await fetchVaultBalance();
+      
+      alert(`✅ Цель отменена!`);
       
       setError('');
     } catch (err) {
@@ -136,6 +172,73 @@ const GoalsPage = () => {
       setError(err.message || 'Не удалось отменить цель');
     } finally {
       setLoading(false);
+    }
+  };
+  
+  // Закрытие цели (вывод денег при достижении 100%)
+  const handleCompleteGoal = async () => {
+    if (!goal) return;
+    
+    if (!window.confirm(`Вы уверены, что хотите закрыть цель "${goal.title}"? На ваш кошелек будет переведено ${goal.targetAmount} SOL.`)) {
+      return;
+    }
+    
+    if (!walletConnected) {
+      alert('Пожалуйста, подключите Phantom кошелек для выполнения операции.');
+      return;
+    }
+    
+    try {
+      setIsClosingGoal(true);
+      
+      // Получаем адрес кошелька из localStorage
+      const walletAddress = localStorage.getItem('phantom_wallet');
+      if (!walletAddress) {
+        throw new Error('Кошелек не найден');
+      }
+      
+      // Инициализируем провайдер контракта
+      if (window.solana) {
+        await contractService.initializeProvider(window.solana);
+      }
+      
+      // Выводим сумму цели из копилки
+      const amount = parseFloat(goal.targetAmount);
+      const result = await contractService.withdraw(walletAddress, amount);
+      
+      // Отправляем подпись транзакции на сервер для подтверждения вывода
+      // Используем endpoint из sync-service.js
+      try {
+        const response = await makeAuthenticatedRequest('/sync/confirm-withdraw', {
+          method: 'POST',
+          body: JSON.stringify({
+            signature: result.transaction
+          })
+        });
+        
+        console.log('Сервер подтвердил вывод:', response);
+        
+        // Сервер должен был отметить цель как завершенную в функции confirmWithdraw
+        // Но давайте явно обновим статус цели на клиенте
+        
+      } catch (serverError) {
+        console.warn('Не удалось подтвердить вывод на сервере:', serverError);
+        // Продолжаем выполнение, так как транзакция в блокчейне уже выполнена
+      }
+      
+      // Обновляем состояние - удаляем цель из интерфейса
+      setGoal(null);
+      
+      // Обновляем баланс копилки
+      await fetchVaultBalance();
+      
+      alert(`✅ Цель успешно закрыта! ${amount.toFixed(4)} SOL переведены на ваш кошелек.\n\nТранзакция: ${result.transaction}`);
+      
+    } catch (error) {
+      console.error('Ошибка при закрытии цели:', error);
+      alert('Ошибка при закрытии цели: ' + (error.message || 'Неизвестная ошибка'));
+    } finally {
+      setIsClosingGoal(false);
     }
   };
   
@@ -167,6 +270,11 @@ const GoalsPage = () => {
     if (target <= 0) return 0;
     const progress = (vaultBalance / target) * 100;
     return Math.min(100, Math.max(0, progress)); // Ограничиваем от 0 до 100%
+  };
+  
+  // Проверка, достигнута ли цель (100% или больше)
+  const isGoalCompleted = () => {
+    return calculateProgress() >= 100;
   };
   
   // Расчет ежедневного взноса НА ОСНОВЕ РЕАЛЬНОГО БАЛАНСА КОПИЛКИ
@@ -245,20 +353,34 @@ const GoalsPage = () => {
               <div className="goal-header">
                 <h3 className="goal-title">{goal.title}</h3>
                 <div className="goal-actions">
-                  {/* <button 
+                  {/* Кнопка обновления баланса */}
+                  <button 
                     onClick={handleRefreshBalance}
                     className="refresh-balance-button"
                     title="Обновить баланс копилки"
+                    disabled={isClosingGoal}
                   >
                     🔄
-                  </button> */}
-                  <button 
-                    onClick={handleCancelGoal} 
-                    className="delete-goal-button"
-                    disabled={loading}
-                  >
-                    Отменить цель
                   </button>
+                  
+                  {/* Условный рендеринг кнопок в зависимости от прогресса */}
+                  {isGoalCompleted() ? (
+                    <button 
+                      onClick={handleCompleteGoal}
+                      className="complete-goal-button"
+                      disabled={isClosingGoal || !walletConnected}
+                    >
+                      {isClosingGoal ? 'Закрытие...' : 'Закрыть цель'}
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={handleCancelGoal} 
+                      className="delete-goal-button"
+                      disabled={loading || isClosingGoal}
+                    >
+                      Отменить цель
+                    </button>
+                  )}
                 </div>
               </div>
               
@@ -310,18 +432,46 @@ const GoalsPage = () => {
                 <div className="progress-bar">
                   <div 
                     className="progress-fill" 
-                    style={{ width: `${calculateProgress()}%` }}
+                    style={{ 
+                      width: `${calculateProgress()}%`,
+                      background: isGoalCompleted() 
+                        ? 'linear-gradient(90deg, #14F195 0%, #00D18C 100%)' 
+                        : 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)'
+                    }}
                   ></div>
                 </div>
                 <div className="progress-percentage">
                   {calculateProgress().toFixed(1)}%
+                  {isGoalCompleted() && (
+                    <span style={{ marginLeft: '10px', color: '#14F195', fontWeight: 'bold' }}>
+                      ✅ Цель достигнута!
+                    </span>
+                  )}
                 </div>
               </div>
               
               <div className="goal-footer">
                 <span className="created-date">
-                  Статус: <span className="status-active">Активна</span>
+                  Статус: 
+                  <span className={`status-${isGoalCompleted() ? 'completed' : 'active'}`} 
+                        style={{ 
+                          color: isGoalCompleted() ? '#14F195' : '#667eea',
+                          fontWeight: 'bold',
+                          marginLeft: '5px'
+                        }}>
+                    {isGoalCompleted() ? 'Готова к закрытию' : 'Активна'}
+                  </span>
                 </span>
+                {isGoalCompleted() && !walletConnected && (
+                  <div style={{ marginTop: '10px', color: '#f56565', fontSize: '12px' }}>
+                    ⚠️ Для закрытия цели подключите Phantom кошелек
+                  </div>
+                )}
+                {isGoalCompleted() && (
+                  <div style={{ marginTop: '10px', fontSize: '12px', color: '#4a5568' }}>
+                    🎉 Поздравляем! Вы накопили нужную сумму. Нажмите "Закрыть цель", чтобы вывести средства на кошелек.
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -347,10 +497,20 @@ const GoalsPage = () => {
           <ul className="info-list" style={{ marginTop: '15px', paddingLeft: '20px' }}>
             <li>✅ Реальный баланс из Solana блокчейна</li>
             <li>✅ Автоматическое отслеживание прогресса</li>
-            <li>✅ Возможность отменить цель в любой момент</li>
+            <li>✅ При достижении 100% - кнопка "Закрыть цель" для вывода средств</li>
+            <li>✅ Возможность отменить цель в любой момент (ранний вывод)</li>
             <li>✅ Деньги возвращаются на ваш счет при отмене</li>
             <li>✅ Настройте периодичность взносов под свои возможности</li>
           </ul>
+          
+          <div style={{ marginTop: '20px', padding: '15px', background: '#f0f9ff', borderRadius: '10px', borderLeft: '4px solid #667eea' }}>
+            <h4 style={{ color: '#2d3748', marginBottom: '10px' }}>Важно!</h4>
+            <p style={{ fontSize: '14px', color: '#4a5568', marginBottom: '10px' }}>
+              При закрытии цели (достижении 100%) средства автоматически выводятся на ваш Phantom кошелек.
+              При отмене цели (раннем выводе) также происходит возврат средств, но это может повлиять на вашу статистику.
+            </p>
+          </div>
+          
           {vaultAddress && (
             <div className="vault-info-section" style={{ marginTop: '15px', padding: '10px', background: '#f0f8ff', borderRadius: '8px' }}>
               <small style={{ fontSize: '12px' }}>

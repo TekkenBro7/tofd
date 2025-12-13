@@ -107,10 +107,6 @@ const HomePage = () => {
       // Обновляем балансы
       await updateBalances(result.publicKey);
       
-      // Даем XP за подключение кошелька
-      if (addXP) {
-        addXP(100);
-      }
       
       alert('✅ Кошелек Phantom успешно подключен!');
       
@@ -175,11 +171,7 @@ const HomePage = () => {
       
       alert(`✅ Успешно пополнено ${amount} SOL\nТранзакция: ${result.transaction}`);
       
-      // Даем XP за пополнение
-      if (addXP) {
-        addXP(10);
-      }
-      
+    
     } catch (error) {
       console.error('Ошибка пополнения:', error);
       alert('Ошибка при пополнении: ' + error.message);
@@ -243,10 +235,6 @@ const HomePage = () => {
       
       alert(`✅ Копилка создана!\nАдрес: ${result.vaultAddress}`);
       
-      // Даем XP за создание копилки
-      if (addXP) {
-        addXP(50);
-      }
       
     } catch (error) {
       console.error('Ошибка создания копилки:', error);
@@ -300,11 +288,7 @@ const HomePage = () => {
       // Сохраняем accessToken и информацию о пользователе
       authApi.saveAccessToken(response.accessToken);
       authApi.saveUser(response.user);
-
-      // При регистрации даем начальный XP
-      if (isRegisterMode && addXP) {
-        addXP(50); // 50 XP за регистрацию
-      }
+     
 
       // Перезагружаем страницу для обновления Layout
       window.location.reload();

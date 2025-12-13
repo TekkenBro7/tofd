@@ -116,3 +116,21 @@ export const CATEGORIES = {
   'рейтинг': { name: 'Рейтинг', icon: '⭐' },
   'другие': { name: 'Другие', icon: '🔒' }
 };
+
+// Вспомогательная функция для получения уровня по рейтингу
+export const getLevelFromRating = (rating) => {
+  const ratingNum = parseInt(rating || '0', 10);
+  return Math.floor(ratingNum / 100) + 1;
+};
+
+// Получить XP до следующего уровня
+export const getXPToNextLevel = (rating) => {
+  const ratingNum = parseInt(rating || '0', 10);
+  return 100 - (ratingNum % 100);
+};
+
+// Получить прогресс в текущем уровне
+export const getLevelProgress = (rating) => {
+  const ratingNum = parseInt(rating || '0', 10);
+  return (ratingNum % 100) / 100 * 100;
+};

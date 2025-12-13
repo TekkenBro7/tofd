@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { achievementsApi } from '../services/achievementsApi'
 import './Layout.css';
+import { getLevelFromRating, getXPToNextLevel, getLevelProgress } from '../config/achievementsConfig';
 
 const Layout = () => {
   const [currentUser, setCurrentUser] = useState('');
@@ -79,18 +80,23 @@ const Layout = () => {
     try {
       if (!isAuthenticated) return;
 
-      const levelData = await achievementsApi.getUserLevel();
-      setUserLevel(levelData.level);
-      setUserXP(levelData.xp);
-      setLevelProgress(levelData.progress);
-      setXpToNextLevel(levelData.xpToNextLevel);
+      const stats = await achievementsApi.getUserStats();
+      const rating = parseInt(stats.rating || '0', 10);
 
-      // Сохраняем в localStorage для быстрого доступа
-      localStorage.setItem('userLevel', levelData.level.toString());
-      localStorage.setItem('userXP', levelData.xp.toString());
+      const level = getLevelFromRating(stats.rating);
+      const xpToNext = getXPToNextLevel(stats.rating);
+      const progress = getLevelProgress(stats.rating);
+
+      setUserLevel(level);
+      setUserXP(rating);
+      setLevelProgress(progress);
+      setXpToNextLevel(xpToNext);
+
+      localStorage.setItem('userLevel', level.toString());
+      localStorage.setItem('userXP', rating.toString());
+      localStorage.setItem('userRating', stats.rating || '0');
     } catch (error) {
       console.error('Ошибка загрузки уровня:', error);
-      // Используем значения по умолчанию
       setUserLevel(1);
       setUserXP(0);
       setLevelProgress(0);
@@ -114,34 +120,35 @@ const Layout = () => {
 
   // Функция для добавления XP
   const addXP = async (xpToAdd) => {
-    if (!isAuthenticated || xpToAdd <= 0) return;
+    if (!isAuthenticated || xpToAdd === 0) return;
 
     try {
-      // Обновляем локально для быстрой обратной связи
-      const newXP = userXP + xpToAdd;
-      const newLevel = Math.floor(newXP / XP_PER_LEVEL) + 1;
+      // Получаем текущий рейтинг
+      const currentRating = userXP;
+      const newRating = currentRating + xpToAdd;
 
-      setUserXP(newXP);
+      // Рассчитываем новый уровень
+      const newLevel = getLevelFromRating(newRating.toString());
+      const progress = getLevelProgress(newRating.toString());
+      const xpToNext = getXPToNextLevel(newRating.toString());
+
+      setUserXP(newRating);
       setUserLevel(newLevel);
-
-      // Рассчитываем новый прогресс
-      const xpForCurrentLevel = (newLevel - 1) * XP_PER_LEVEL;
-      const xpInCurrentLevel = newXP - xpForCurrentLevel;
-      const progress = (xpInCurrentLevel / XP_PER_LEVEL) * 100;
       setLevelProgress(progress);
-      setXpToNextLevel(XP_PER_LEVEL - xpInCurrentLevel);
+      setXpToNextLevel(xpToNext);
 
       // Сохраняем в localStorage
       localStorage.setItem('userLevel', newLevel.toString());
-      localStorage.setItem('userXP', newXP.toString());
+      localStorage.setItem('userXP', newRating.toString());
+      localStorage.setItem('userRating', newRating.toString());
 
-      // Показываем уведомление о получении XP
+      // Показываем уведомление
       showXPNotification(xpToAdd);
 
     } catch (error) {
       console.error('Ошибка при добавлении XP:', error);
     }
-  };
+  };  
 
   // Функция для показа уведомления о получении XP
   const showXPNotification = (xp) => {
