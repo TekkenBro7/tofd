@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { makeAuthenticatedRequest } from '../../services/authApi';
+import { solanaService } from '../../services/solanaService'; // Добавьте этот импорт
 import './GoalsPage.css';
 
 const GoalsPage = () => {
@@ -7,6 +8,8 @@ const GoalsPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [vaultBalance, setVaultBalance] = useState(0);
+  const [vaultAddress, setVaultAddress] = useState('');
   
   // Данные для формы
   const [title, setTitle] = useState('');
@@ -14,9 +17,10 @@ const GoalsPage = () => {
   const [deadline, setDeadline] = useState('');
   const [periodicityDays, setPeriodicityDays] = useState('7');
   
-  // Загрузка активной цели при монтировании
+  // Загрузка активной цели и баланса копилки при монтировании
   useEffect(() => {
     fetchActiveGoal();
+    fetchVaultBalance();
   }, []);
   
   // Функция загрузки активной цели
@@ -38,6 +42,28 @@ const GoalsPage = () => {
       setGoal(null);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  // Функция загрузки баланса копилки
+  const fetchVaultBalance = async () => {
+    try {
+      // Получаем кошелек из localStorage или Phantom
+      const phantomWallet = localStorage.getItem('phantom_wallet');
+      if (!phantomWallet) {
+        console.log('Кошелек Phantom не подключен');
+        return;
+      }
+      
+      const vaultInfo = await solanaService.getVaultBalance(phantomWallet);
+      if (vaultInfo) {
+        setVaultBalance(vaultInfo.balance);
+        setVaultAddress(vaultInfo.vaultAddress);
+      }
+    } catch (error) {
+      console.error('Ошибка получения баланса копилки:', error);
+      // Если копилка не создана, баланс будет 0
+      setVaultBalance(0);
     }
   };
   
@@ -72,6 +98,10 @@ const GoalsPage = () => {
       });
       
       setGoal(newGoal);
+      
+      // Обновляем баланс копилки после создания цели
+      await fetchVaultBalance();
+      
       resetForm();
       setShowForm(false);
       setError('');
@@ -96,6 +126,10 @@ const GoalsPage = () => {
       });
       
       setGoal(null);
+      
+      // Обновляем баланс копилки после отмены цели
+      await fetchVaultBalance();
+      
       setError('');
     } catch (err) {
       console.error('Ошибка при отмене цели:', err);
@@ -121,52 +155,54 @@ const GoalsPage = () => {
     return new Intl.NumberFormat('ru-RU', {
       style: 'currency',
       currency: 'SOL',
-      minimumFractionDigits: 0
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4
     }).format(numAmount);
   };
   
-  // Расчет прогресса
+  // Расчет прогресса НА ОСНОВЕ РЕАЛЬНОГО БАЛАНСА КОПИЛКИ
   const calculateProgress = () => {
-    if (!goal) return 0;
+    if (!goal || !goal.targetAmount) return 0;
     const target = parseFloat(goal.targetAmount);
-    const accumulated = parseFloat(goal.accumulatedAmount);
-    return Math.min(100, (accumulated / target) * 100);
+    if (target <= 0) return 0;
+    const progress = (vaultBalance / target) * 100;
+    return Math.min(100, Math.max(0, progress)); // Ограничиваем от 0 до 100%
   };
   
-  // Расчет ежедневного взноса
+  // Расчет ежедневного взноса НА ОСНОВЕ РЕАЛЬНОГО БАЛАНСА КОПИЛКИ
   const calculateDailyContribution = () => {
     if (!goal) return 0;
     
     const target = parseFloat(goal.targetAmount);
-    const accumulated = parseFloat(goal.accumulatedAmount);
+    const accumulated = vaultBalance; // Используем реальный баланс копилки
     const deadlineDate = new Date(goal.deadline);
     const now = new Date();
     
     // Количество дней до дедлайна
     const timeDiff = deadlineDate.getTime() - now.getTime();
-    const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+    const daysDiff = Math.max(0, Math.ceil(timeDiff / (1000 * 3600 * 24)));
     
-    if (daysDiff <= 0) return target - accumulated;
+    if (daysDiff <= 0) return Math.max(0, target - accumulated);
     
     return (target - accumulated) / daysDiff;
   };
   
-  // Расчет ежедневного взноса на основе периодичности
+  // Расчет периодического взноса НА ОСНОВЕ РЕАЛЬНОГО БАЛАНСА КОПИЛКИ
   const calculatePeriodicContribution = () => {
     if (!goal) return 0;
     
     const target = parseFloat(goal.targetAmount);
-    const accumulated = parseFloat(goal.accumulatedAmount);
+    const accumulated = vaultBalance; // Используем реальный баланс копилки
     const periodDays = parseInt(goal.periodicityDays) || 7;
     
     // Количество периодов до дедлайна
     const deadlineDate = new Date(goal.deadline);
     const now = new Date();
     const timeDiff = deadlineDate.getTime() - now.getTime();
-    const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
-    const periodsCount = Math.ceil(daysDiff / periodDays);
+    const daysDiff = Math.max(0, Math.ceil(timeDiff / (1000 * 3600 * 24)));
+    const periodsCount = Math.max(1, Math.ceil(daysDiff / periodDays));
     
-    if (periodsCount <= 0) return target - accumulated;
+    if (periodsCount <= 0) return Math.max(0, target - accumulated);
     
     return (target - accumulated) / periodsCount;
   };
@@ -179,6 +215,11 @@ const GoalsPage = () => {
       case 30: return 'Ежемесячно';
       default: return `Каждые ${daysNum} дней`;
     }
+  };
+  
+  // Функция для обновления баланса копилки
+  const handleRefreshBalance = async () => {
+    await fetchVaultBalance();
   };
   
   if (loading && !goal) {
@@ -204,6 +245,13 @@ const GoalsPage = () => {
               <div className="goal-header">
                 <h3 className="goal-title">{goal.title}</h3>
                 <div className="goal-actions">
+                  {/* <button 
+                    onClick={handleRefreshBalance}
+                    className="refresh-balance-button"
+                    title="Обновить баланс копилки"
+                  >
+                    🔄
+                  </button> */}
                   <button 
                     onClick={handleCancelGoal} 
                     className="delete-goal-button"
@@ -221,7 +269,14 @@ const GoalsPage = () => {
                 </div>
                 <div className="goal-detail">
                   <span className="detail-label">Собрано:</span>
-                  <span className="detail-value">{formatCurrency(goal.accumulatedAmount)}</span>
+                  <span className="detail-value">
+                    {vaultBalance.toFixed(4)} SOL
+                    {vaultAddress && (
+                      <span className="vault-hint" title={`Адрес копилки: ${vaultAddress}`}>
+                        *
+                      </span>
+                    )}
+                  </span>
                 </div>
                 <div className="goal-detail">
                   <span className="detail-label">Срок:</span>
@@ -249,7 +304,7 @@ const GoalsPage = () => {
                 <div className="progress-header">
                   <span>Прогресс</span>
                   <span>
-                    {formatCurrency(goal.accumulatedAmount)} из {formatCurrency(goal.targetAmount)}
+                    {formatCurrency(vaultBalance)} из {formatCurrency(goal.targetAmount)}
                   </span>
                 </div>
                 <div className="progress-bar">
@@ -288,14 +343,28 @@ const GoalsPage = () => {
         {/* Информация о системе целей */}
         <div className="info-section" style={{ marginTop: '40px', background: 'white', padding: '25px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.1)' }}>
           <h3>Как работает система целей?</h3>
-          <p>Вы можете создать только одну активную цель одновременно. Это помогает сосредоточиться на достижении одного финансового результата.</p>
+          <p>Баланс копилки отображается в реальном времени из Solana блокчейна. Прогресс рассчитывается на основе текущего баланса.</p>
           <ul className="info-list" style={{ marginTop: '15px', paddingLeft: '20px' }}>
-            <li>✅ Одна активная цель одновременно</li>
+            <li>✅ Реальный баланс из Solana блокчейна</li>
             <li>✅ Автоматическое отслеживание прогресса</li>
             <li>✅ Возможность отменить цель в любой момент</li>
             <li>✅ Деньги возвращаются на ваш счет при отмене</li>
             <li>✅ Настройте периодичность взносов под свои возможности</li>
           </ul>
+          {vaultAddress && (
+            <div className="vault-info-section" style={{ marginTop: '15px', padding: '10px', background: '#f0f8ff', borderRadius: '8px' }}>
+              <small style={{ fontSize: '12px' }}>
+                Адрес копилки: {vaultAddress.substring(0, 20)}...{vaultAddress.substring(vaultAddress.length - 6)}
+                <button 
+                  onClick={() => navigator.clipboard.writeText(vaultAddress)}
+                  style={{ marginLeft: '10px', background: 'none', border: 'none', cursor: 'pointer' }}
+                  title="Скопировать адрес"
+                >
+                  📋
+                </button>
+              </small>
+            </div>
+          )}
         </div>
       </main>
       
@@ -343,6 +412,7 @@ const GoalsPage = () => {
                     placeholder="50000"
                     className="form-input"
                     min="1"
+                    step="0.0001"
                     required
                     disabled={loading}
                   />
