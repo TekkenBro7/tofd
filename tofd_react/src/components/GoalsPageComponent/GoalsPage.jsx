@@ -120,7 +120,7 @@ const GoalsPage = () => {
     const numAmount = parseFloat(amount);
     return new Intl.NumberFormat('ru-RU', {
       style: 'currency',
-      currency: 'RUB',
+      currency: 'SOL',
       minimumFractionDigits: 0
     }).format(numAmount);
   };
@@ -334,7 +334,7 @@ const GoalsPage = () => {
               
               <div className="form-row">
                 <div className="form-group">
-                  <label htmlFor="targetAmount">Целевая сумма (руб) *</label>
+                  <label htmlFor="targetAmount">Целевая сумма (SOL) *</label>
                   <input
                     type="number"
                     id="targetAmount"
