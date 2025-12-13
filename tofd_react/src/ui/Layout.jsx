@@ -211,7 +211,7 @@ const Layout = () => {
           <div className="header-section logo-section">
             <Link to="/" className="logo">
               <span className="logo-icon">💰</span>
-              <span className="logo-text">ТОФД Копилка</span>
+              <span className="logo-text">SaveChain</span>
             </Link>
           </div>
 
@@ -237,7 +237,7 @@ const Layout = () => {
                 >
                   Достижения
                 </Link>
-                <Link
+                {/* <Link
                   to="/deposit"
                   className={`nav-link ${location.pathname === '/deposit' ? 'active' : ''}`}
                 >
@@ -248,7 +248,7 @@ const Layout = () => {
                   className={`nav-link ${location.pathname === '/withdrawal' ? 'active' : ''}`}
                 >
                   Снятие
-                </Link>
+                </Link> */}
               </nav>
             </div>
           )}

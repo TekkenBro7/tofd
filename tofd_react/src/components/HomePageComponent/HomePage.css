@@ -171,6 +171,7 @@ body {
   background: white;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   padding: 20px 0;
+  margin-bottom: 30px;
 }
 
 .header-content {
@@ -209,9 +210,317 @@ body {
 .main-content {
   max-width: 1200px;
   margin: 0 auto;
+  padding: 0 20px 40px;
+}
+
+/* Панель кошелька */
+.wallet-panel {
+  background: linear-gradient(135deg, #9945FF 0%, #14F195 100%);
+  color: white;
+  padding: 25px;
+  border-radius: 20px;
+  margin-bottom: 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  animation: fadeIn 0.5s ease;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.wallet-info h3 {
+  margin-bottom: 10px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.wallet-address {
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  opacity: 0.9;
+  word-break: break-all;
+}
+
+.wallet-status {
+  opacity: 0.8;
+}
+
+.connect-wallet-button {
+  padding: 12px 24px;
+  background: white;
+  color: #9945FF;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.connect-wallet-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(255, 255, 255, 0.2);
+}
+
+.connect-wallet-button.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #ccc;
+  color: #666;
+}
+
+.disconnect-button {
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.disconnect-button:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.wallet-error {
+  margin-bottom: 30px;
+}
+
+/* Секция балансов */
+.balance-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 25px;
+  margin-bottom: 40px;
+}
+
+.balance-card {
+  background: white;
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.balance-card:hover {
+  transform: translateY(-5px);
+}
+
+.balance-card h4 {
+  color: #718096;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 15px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.balance-amount {
+  color: #2d3748;
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+.wallet-balance .balance-amount {
+  color: #667eea;
+}
+
+.vault-balance .balance-amount {
+  color: #14F195;
+}
+
+.refresh-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #f7fafc;
+  color: #4a5568;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.refresh-button:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e0;
+}
+
+.vault-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.vault-address {
+  color: #718096;
+  font-size: 12px;
+  font-family: 'Courier New', monospace;
+}
+
+.copy-button {
+  background: none;
+  border: none;
+  color: #718096;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.copy-button:hover {
+  background: #f7fafc;
+  color: #4a5568;
+}
+
+/* Управление копилкой */
+.vault-management-section {
+  background: white;
+  border-radius: 20px;
+  padding: 30px;
+  margin-bottom: 40px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.section-title {
+  color: #2d3748;
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 25px;
+}
+
+.create-vault-container {
+  text-align: center;
   padding: 40px 20px;
 }
 
+.vault-description {
+  color: #718096;
+  margin-bottom: 30px;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.6;
+}
+
+.create-vault-button {
+  padding: 16px 40px;
+  background: linear-gradient(135deg, #9945FF 0%, #14F195 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.create-vault-button:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(153, 69, 255, 0.3);
+}
+
+.vault-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+}
+
+.control-group {
+  padding: 25px;
+  border-radius: 15px;
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+}
+
+.control-group h4 {
+  color: #2d3748;
+  font-size: 18px;
+  margin-bottom: 20px;
+  font-weight: 600;
+}
+
+.input-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.amount-input {
+  flex: 1;
+  padding: 14px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 16px;
+  background: white;
+  transition: all 0.3s;
+}
+
+.amount-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.action-button {
+  padding: 14px 24px;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.deposit-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.deposit-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 14px rgba(102, 126, 234, 0.4);
+}
+
+.withdraw-button {
+  background: linear-gradient(135deg, #14F195 0%, #00D18C 100%);
+  color: white;
+}
+
+.withdraw-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 7px 14px rgba(20, 241, 149, 0.4);
+}
+
+.action-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.input-hint {
+  color: #a0aec0;
+  font-size: 12px;
+  display: block;
+  margin-top: 8px;
+}
+
+/* Основной контент */
 .hero-section {
   background: white;
   border-radius: 20px;
@@ -250,7 +559,7 @@ body {
   margin-bottom: 40px;
 }
 
-.features-section h3 {
+.features-section .section-title {
   color: white;
   font-size: 28px;
   margin-bottom: 30px;
@@ -260,26 +569,31 @@ body {
 .features-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 30px;
+  gap: 25px;
 }
 
 .feature-card {
   background: white;
   border-radius: 15px;
-  padding: 30px;
+  padding: 25px;
   text-align: center;
   transition: all 0.3s;
   cursor: pointer;
+  height: 100%;
 }
 
 .feature-card:hover {
-  transform: translateY(-10px);
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+  transform: translateY(-8px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
 }
 
 .feature-icon {
   font-size: 48px;
   margin-bottom: 20px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .feature-card h4 {
@@ -302,179 +616,74 @@ body {
   height: 100%;
 }
 
-/* Информация о пользователе */
-.user-info-section {
+/* Информационная секция */
+.info-section {
   background: white;
   border-radius: 20px;
-  padding: 40px;
+  padding: 30px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 }
 
-.user-info-section h3 {
-  color: #2d3748;
-  font-size: 24px;
-  margin-bottom: 30px;
+.info-section p {
+  color: #718096;
+  margin-bottom: 20px;
+  line-height: 1.6;
 }
 
-.info-card {
-  background: #f7fafc;
-  border-radius: 15px;
-  padding: 30px;
+.info-list {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0;
 }
 
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px 0;
+.info-list li {
+  padding: 10px 0;
+  color: #4a5568;
   border-bottom: 1px solid #e2e8f0;
 }
 
-.info-row:last-child {
+.info-list li:last-child {
   border-bottom: none;
 }
 
-.info-label {
-  color: #4a5568;
-  font-weight: 500;
-}
-
-.info-value {
-  color: #2d3748;
-  font-weight: 600;
-}
-
-.status-active {
-  color: #48bb78;
-  background: #c6f6d5;
-  padding: 5px 15px;
-  border-radius: 20px;
-  font-size: 14px;
-}
-
-/* Футер */
-.footer {
-  background: white;
-  padding: 30px 0;
+.phantom-install {
+  margin-top: 30px;
+  padding: 25px;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
+  border-radius: 15px;
   text-align: center;
-  margin-top: 40px;
-  border-top: 1px solid #e2e8f0;
+  border: 2px dashed #c3dafe;
 }
 
-.footer p {
-  color: #718096;
-  font-size: 14px;
-}
-
-/* Стили для формы кошелька */
-.wallet-card {
-  max-width: 500px;
-}
-
-.wallet-button {
-  background: linear-gradient(135deg, #14F195 0%, #00D18C 100%) !important;
-}
-
-.wallet-button:hover {
-  box-shadow: 0 7px 14px rgba(20, 241, 149, 0.4) !important;
-}
-
-.wallet-info {
-  background: #f0f9ff;
-  border-radius: 10px;
-  padding: 15px;
-  margin: 20px 0;
-  border-left: 4px solid #14F195;
-}
-
-.wallet-info h4 {
+.phantom-install h4 {
   color: #2d3748;
   margin-bottom: 10px;
-  font-size: 16px;
-}
-
-.wallet-info ul {
-  padding-left: 20px;
-  color: #4a5568;
-  font-size: 14px;
-}
-
-.wallet-info li {
-  margin-bottom: 5px;
-}
-
-.form-hint {
-  display: block;
-  margin-top: 5px;
-  color: #a0aec0;
-  font-size: 12px;
-}
-
-.wallet-panel {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 20px;
-  border-radius: 15px;
-  margin-bottom: 30px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  animation: fadeIn 0.5s ease;
-}
-
-.wallet-panel h3 {
-  margin-bottom: 5px;
   font-size: 18px;
 }
 
-.wallet-panel p {
+.phantom-install p {
+  color: #718096;
+  margin-bottom: 20px;
   font-size: 14px;
-  opacity: 0.9;
 }
 
-.disconnect-button {
-  background: rgba(255, 255, 255, 0.2);
+.install-button {
+  display: inline-block;
+  padding: 12px 30px;
+  background: linear-gradient(135deg, #9945FF 0%, #14F195 100%);
   color: white;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  padding: 8px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
+  text-decoration: none;
+  border-radius: 10px;
+  font-weight: 600;
   transition: all 0.3s;
 }
 
-.disconnect-button:hover {
-  background: rgba(255, 255, 255, 0.3);
+.install-button:hover {
   transform: translateY(-2px);
-}
-
-/* Solana цвета для выделения */
-.solana-green {
-  color: #14F195;
-}
-
-.solana-gradient {
-  background: linear-gradient(135deg, #9945FF 0%, #14F195 100%);
+  box-shadow: 0 10px 20px rgba(153, 69, 255, 0.3);
 }
 
 /* Мобильная адаптация */
-@media (max-width: 768px) {
-  .wallet-panel {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 15px;
-  }
-  
-  .wallet-panel h3 {
-    font-size: 16px;
-  }
-  
-  .disconnect-button {
-    align-self: flex-end;
-  }
-}
-
-/* Адаптивность */
 @media (max-width: 768px) {
   .auth-card {
     padding: 30px 20px;
@@ -498,17 +707,56 @@ body {
     font-size: 16px;
   }
   
+  .wallet-panel {
+    flex-direction: column;
+    gap: 20px;
+    text-align: center;
+  }
+  
+  .balance-section {
+    grid-template-columns: 1fr;
+  }
+  
+  .vault-controls {
+    grid-template-columns: 1fr;
+  }
+  
+  .input-group {
+    flex-direction: column;
+  }
+  
+  .action-button {
+    width: 100%;
+  }
+  
   .features-grid {
     grid-template-columns: 1fr;
   }
   
-  .user-info-section {
-    padding: 30px 20px;
+  .info-section {
+    padding: 25px 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .wallet-panel {
+    padding: 20px;
   }
   
-  .info-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 5px;
+  .balance-card {
+    padding: 20px;
+  }
+  
+  .balance-amount {
+    font-size: 28px;
+  }
+  
+  .create-vault-button {
+    width: 100%;
+    padding: 14px 20px;
+  }
+  
+  .section-title {
+    font-size: 20px;
   }
 }
