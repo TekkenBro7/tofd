@@ -67,17 +67,13 @@ class ContractService {
 
       const amount = new BN(amountSOL * 1e9); // Конвертация SOL в lamports
 
-      await this.createVault(userPublicKey);
-      
-      const tx = await this.program.methods
-        .deposit(amount)
-        .accounts({
-          vault: vaultPda,
-          vaultSystem: vaultPda,
-          user: userPublicKey,
-          systemProgram: PublicKey.default,
-        })
-        .rpc();
+      let tx;
+      try {
+        tx = await this._deposit(userPublicKey, vaultPda, amount)
+      } catch (e) {
+        await this.createVault(userPublicKey);
+        tx = await this._deposit(userPublicKey, vaultPda, amount)
+      }
 
       return {
         success: true,
@@ -90,6 +86,18 @@ class ContractService {
     }
   }
 
+  async _deposit(userPublicKey, vaultPda, amount) {
+    return this.program.methods
+      .deposit(amount)
+      .accounts({
+        vault: vaultPda,
+        vaultSystem: vaultPda,
+        user: userPublicKey,
+        systemProgram: PublicKey.default,
+      })
+      .rpc();
+  }
+
   // Вывод из копилки
   async withdraw(userPublicKey, amountSOL) {
     try {
@@ -100,18 +108,14 @@ class ContractService {
 
       const amount = new BN(amountSOL * 1e9); // Конвертация SOL в lamports
 
-      await this.createVault(userPublicKey);
+      let tx;
+      try {
+        tx = await this._withdraw(userPublicKey, vaultPda, amount);
+      } catch(e) {
+        await this.createVault(userPublicKey);
+        tx = await this._withdraw(userPublicKey, vaultPda, amount);
+      }
       
-      const tx = await this.program.methods
-        .withdraw(amount)
-        .accounts({
-          vault: vaultPda,
-          vaultSystem: vaultPda,
-          user: userPublicKey,
-          systemProgram: PublicKey.default,
-        })
-        .rpc();
-
       return {
         success: true,
         transaction: tx,
@@ -121,6 +125,18 @@ class ContractService {
       console.error('Ошибка вывода:', error);
       throw error;
     }
+  }
+
+  async _withdraw(userPublicKey, vaultPda, amount) {
+    return this.program.methods
+      .withdraw(amount)
+      .accounts({
+        vault: vaultPda,
+        vaultSystem: vaultPda,
+        user: userPublicKey,
+        systemProgram: PublicKey.default,
+      })
+      .rpc();
   }
 
   // Получение информации о копилке
