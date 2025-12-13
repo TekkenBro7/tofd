@@ -57,6 +57,20 @@ class ContractService {
     }
   }
 
+  async vaultExists(userPublicKey) {
+    try {
+      const [vaultPda] = await PublicKey.findProgramAddressSync(
+        [Buffer.from('vault'), new PublicKey(userPublicKey).toBuffer()],
+        this.program.programId
+      );
+
+      const accountInfo = await this.connection.getAccountInfo(vaultPda);
+      return !!accountInfo;
+    } catch (error) {
+      return false;
+    }
+  }
+
   // Пополнение копилки
   async deposit(userPublicKey, amountSOL) {
     try {
@@ -66,14 +80,12 @@ class ContractService {
       );
 
       const amount = new BN(amountSOL * 1e9); // Конвертация SOL в lamports
-
-      let tx;
-      try {
-        tx = await this._deposit(userPublicKey, vaultPda, amount)
-      } catch (e) {
+      
+      if (!(await this.vaultExists(userPublicKey))) {
         await this.createVault(userPublicKey);
-        tx = await this._deposit(userPublicKey, vaultPda, amount)
       }
+      
+      const tx = await this._deposit(userPublicKey, vaultPda, amount)
 
       return {
         success: true,
@@ -107,14 +119,12 @@ class ContractService {
       );
 
       const amount = new BN(amountSOL * 1e9); // Конвертация SOL в lamports
-
-      let tx;
-      try {
-        tx = await this._withdraw(userPublicKey, vaultPda, amount);
-      } catch(e) {
+      
+      if (!(await this.vaultExists(userPublicKey))) {
         await this.createVault(userPublicKey);
-        tx = await this._withdraw(userPublicKey, vaultPda, amount);
       }
+
+      const tx = await this._withdraw(userPublicKey, vaultPda, amount);
       
       return {
         success: true,
