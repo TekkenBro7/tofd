@@ -32,127 +32,26 @@ const AchievementsPage = () => {
       const stats = await achievementsApi.getUserStats();
       setUserStats(stats);
 
-      // 2. Преобразуем конфиг достижений в массив (только те, что есть в бэкенде)
-      // const backendAchievements = [
-      //   {
-      //     id: 1,
-      //     code: 'FG',
-      //     name: 'Первая копилка',
-      //     description: 'Создал свою первую цель накопления',
-      //     points: 20,
-      //     icon: '🎯',
-      //     category: 'цели'
-      //   },
-      //   {
-      //     id: 2,
-      //     code: '7D',
-      //     name: 'Недельный стрик',
-      //     description: 'Пополнял копилку 7 дней подряд',
-      //     points: 30,
-      //     icon: '📅',
-      //     category: 'пополнения'
-      //   },
-      //   {
-      //     id: 3,
-      //     code: '30D',
-      //     name: 'Месячный воин',
-      //     description: 'Пополнял копилку 30 дней подряд',
-      //     points: 100,
-      //     icon: '🛡️',
-      //     category: 'пополнения'
-      //   },
-      //   {
-      //     id: 4,
-      //     code: 'PG',
-      //     name: 'Идеальное завершение',
-      //     description: 'Достиг цели точно в срок без досрочного вывода',
-      //     points: 80,
-      //     icon: '⭐',
-      //     category: 'цели'
-      //   },
-      //   {
-      //     id: 5,
-      //     code: 'SV',
-      //     name: 'Спаситель будущего',
-      //     description: 'Успешно завершил 5 и более целей',
-      //     points: 150,
-      //     icon: '🦸',
-      //     category: 'цели'
-      //   },
-      //   {
-      //     id: 6,
-      //     code: 'R100',
-      //     name: 'Легенда дисциплины',
-      //     description: 'Достиг рейтинга 100 и выше',
-      //     points: 300,
-      //     icon: '👑',
-      //     category: 'рейтинг'
-      //   },
-      //   {
-      //     id: 7,
-      //     code: 'R500',
-      //     name: 'Абсолютный мастер',
-      //     description: 'Достиг рейтинга 500',
-      //     points: 1000,
-      //     icon: '💎',
-      //     category: 'рейтинг'
-      //   },
-      //   {
-      //     id: 8,
-      //     code: 'EW',
-      //     name: 'Сорвался',
-      //     description: 'Снял деньги до достижения цели (штрафная)',
-      //     points: -25,
-      //     icon: '💔',
-      //     category: 'снятия'
-      //   },
-      //   {
-      //     id: 9,
-      //     code: 'FAST',
-      //     name: 'Молниеносный старт',
-      //     description: 'Первый депозит в течение 5 минут после создания цели',
-      //     points: 15,
-      //     icon: '⚡',
-      //     category: 'пополнения'
-      //   },
-      //   {
-      //     id: 10,
-      //     code: 'BIG',
-      //     name: 'Крупный вклад',
-      //     description: 'Один депозит ≥ 5 SOL',
-      //     points: 70,
-      //     icon: '💰',
-      //     category: 'пополнения'
-      //   },
-      //   {
-      //     id: 11,
-      //     code: 'NIGHT',
-      //     name: 'Ночной вкладчик',
-      //     description: 'Депозит сделан с 00:00 до 06:00 по МСК',
-      //     points: 10,
-      //     icon: '🌙',
-      //     category: 'пополнения'
-      //   },
-      //   {
-      //     id: 12,
-      //     code: 'SECRET',
-      //     name: 'Тайная ачивка',
-      //     description: 'Секретное условие',
-      //     points: 100,
-      //     icon: '🔒',
-      //     category: 'другие'
-      //   }
-      // ];
+      // 2. Рассчитываем уровень на основе рейтинга
+      const rating = parseInt(stats.rating || '0', 10);
+      const level = Math.floor(rating / 100) + 1;
+      const xpToNextLevel = 100 - (rating % 100);
+
+      // Сохраняем в контекст или локальное состояние
+      localStorage.setItem('userLevel', level.toString());
+      localStorage.setItem('userXP', rating.toString());
+      localStorage.setItem('userRating', stats.rating || '0');
+
+      // 3. Преобразуем конфиг достижений
       const backendAchievements = Object.values(ACHIEVEMENTS_CONFIG);
 
-
-      // 3. Отмечаем выполненные достижения
+      // 4. Отмечаем выполненные достижения
       const userAchievementCodes = stats.achievements || [];
       const updatedAchievements = backendAchievements.map(achievement => ({
         ...achievement,
         completed: userAchievementCodes.includes(achievement.code),
         earnedXP: achievement.points,
-        xp: Math.abs(achievement.points) // для отображения
+        xp: Math.abs(achievement.points)
       }));
 
       setAchievements(updatedAchievements);
@@ -196,11 +95,13 @@ const AchievementsPage = () => {
             </div>
             <div className="stat-item">
               <span className="stat-label">Всего XP:</span>
-              <span className="stat-value">{totalXP} XP</span>
+              <span className="stat-value">{userStats.rating || '0'} XP</span>
             </div>
             <div className="stat-item">
-              <span className="stat-label">Рейтинг:</span>
-              <span className="stat-value">{userStats.rating || '0'}</span>
+              <span className="stat-label">Уровень:</span>
+              <span className="stat-value">
+                {Math.floor(parseInt(userStats.rating || '0', 10) / 100) + 1}
+              </span>
             </div>
           </div>
         </div>

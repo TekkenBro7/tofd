@@ -522,7 +522,6 @@ select.form-input {
   }
 }
 
-/* Добавьте эти стили в GoalsPage.css */
 
 .goal-actions {
   display: flex;
@@ -566,3 +565,29 @@ select.form-input {
   border-radius: 5px;
   transition: width 0.5s ease;
 }
+
+
+.complete-goal-button {
+  padding: 6px 16px;
+  background: linear-gradient(135deg, #14F195 0%, #00D18C 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.complete-goal-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #00D18C 0%, #00B87A 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(20, 241, 149, 0.3);
+}
+
+.complete-goal-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #ccc;
+}
+
