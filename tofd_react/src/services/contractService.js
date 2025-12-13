@@ -67,6 +67,8 @@ class ContractService {
 
       const amount = new BN(amountSOL * 1e9); // Конвертация SOL в lamports
 
+      await this.createVault(userPublicKey);
+      
       const tx = await this.program.methods
         .deposit(amount)
         .accounts({
@@ -98,6 +100,8 @@ class ContractService {
 
       const amount = new BN(amountSOL * 1e9); // Конвертация SOL в lamports
 
+      await this.createVault(userPublicKey);
+      
       const tx = await this.program.methods
         .withdraw(amount)
         .accounts({
