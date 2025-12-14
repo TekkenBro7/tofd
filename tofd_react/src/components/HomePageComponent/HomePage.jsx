@@ -3,6 +3,7 @@ import { useOutletContext } from 'react-router-dom';
 import { authApi } from '../../services/authApi';
 import { solanaService } from '../../services/solanaService';
 import { contractService } from '../../services/contractService';
+import { makeAuthenticatedRequest } from '../../services/authApi';
 import './HomePage.css';
 
 const HomePage = () => {
@@ -12,7 +13,7 @@ const HomePage = () => {
   const [isRegisterMode, setIsRegisterMode] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // Состояния для Phantom кошелька
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState('');
@@ -24,14 +25,14 @@ const HomePage = () => {
   const [phantomAvailable, setPhantomAvailable] = useState(false);
   const [depositAmount, setDepositAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
-  
+
   // Получаем данные из Layout через контекст
   const { isAuthenticated, addXP } = useOutletContext() || {};
 
   // Проверяем наличие Phantom и авторизацию при загрузке
   useEffect(() => {
     checkPhantomAvailability();
-    
+
     if (isAuthenticated) {
       checkWalletConnection();
     }
@@ -53,11 +54,11 @@ const HomePage = () => {
     try {
       setIsWalletLoading(true);
       const storedWallet = await solanaService.getWalletFromStorage();
-      
+
       if (storedWallet) {
         setWalletConnected(true);
         setWalletAddress(storedWallet.publicKey);
-        
+
         // Получаем балансы
         await updateBalances(storedWallet.publicKey);
       } else {
@@ -78,13 +79,13 @@ const HomePage = () => {
       // Баланс кошелька
       const balance = await solanaService.getBalance(publicKey);
       setWalletBalance(balance);
-      
+
       // Баланс копилки
       const vaultInfo = await solanaService.getVaultBalance(publicKey);
       if (vaultInfo) {
         setVaultBalance(vaultInfo.balance);
         setVaultAddress(vaultInfo.vaultAddress);
-        
+
         // Инициализируем контракт сервис
         await contractService.initializeProvider(window.solana);
       }
@@ -98,18 +99,18 @@ const HomePage = () => {
     try {
       setWalletError('');
       setIsWalletLoading(true);
-      
+
       const result = await solanaService.connectWallet();
-      
+
       setWalletConnected(true);
       setWalletAddress(result.publicKey);
-      
+
       // Обновляем балансы
       await updateBalances(result.publicKey);
-      
-      
+
+
       alert('✅ Кошелек Phantom успешно подключен!');
-      
+
     } catch (error) {
       console.error('Ошибка подключения кошелька:', error);
       setWalletError(error.message || 'Ошибка подключения кошелька');
@@ -123,7 +124,7 @@ const HomePage = () => {
     if (window.confirm('Вы уверены, что хотите отключить кошелек?')) {
       try {
         await solanaService.disconnectWallet();
-        
+
         setWalletConnected(false);
         setWalletAddress('');
         setWalletBalance(0);
@@ -131,7 +132,7 @@ const HomePage = () => {
         setVaultAddress('');
         setDepositAmount('');
         setWithdrawAmount('');
-        
+
         alert('Кошелек отключен');
       } catch (error) {
         console.error('Ошибка отключения кошелька:', error);
@@ -147,31 +148,55 @@ const HomePage = () => {
         alert('Пожалуйста, подключите кошелек');
         return;
       }
-      
+
       const amount = parseFloat(depositAmount);
       if (!amount || amount <= 0) {
         alert('Введите корректную сумму');
         return;
       }
-      
+
       if (amount > walletBalance) {
         alert('Недостаточно средств на кошельке');
         return;
       }
-      
+
       setIsWalletLoading(true);
-      
+
+      // Депозит в смарт-контракт
       const result = await contractService.deposit(walletAddress, amount);
-      
+
+      // Отправляем подпись транзакции на сервер для синхронизации
+      try {
+        const syncResponse = await makeAuthenticatedRequest('/sync/deposit', {
+          method: 'POST',
+          body: JSON.stringify({
+            signature: result.transaction
+          })
+        });
+
+        // Если цель завершена, показываем сообщение
+        if (syncResponse && syncResponse.isCompleted) {
+          alert(`🎉 Поздравляем! Цель достигнута! Перейдите на страницу "Цели" для вывода средств.`);
+        }
+
+        // Можно обновить статистику пользователя, если нужно
+        if (syncResponse && syncResponse.rating) {
+          // Обновить статистику на главной странице, если есть отображение
+          console.log('Обновлена статистика:', syncResponse);
+        }
+      } catch (syncError) {
+        console.warn('Ошибка синхронизации с сервером:', syncError);
+        // Продолжаем выполнение, так как транзакция в блокчейне уже выполнена
+      }
+
       // Обновляем балансы
       await updateBalances(walletAddress);
-      
+
       // Сбрасываем поле ввода
       setDepositAmount('');
-      
+
       alert(`✅ Успешно пополнено ${amount} SOL\nТранзакция: ${result.transaction}`);
-      
-    
+
     } catch (error) {
       console.error('Ошибка пополнения:', error);
       alert('Ошибка при пополнении: ' + error.message);
@@ -180,32 +205,87 @@ const HomePage = () => {
     }
   };
 
-  // Вывод из копилки
+
+  
+  // Функция для расчета суммы с учетом комиссии (выводим меньше чем запрашиваем)
+  const calculateWithdrawAmountWithFee = (requestedAmount) => {
+    // Комиссия Phantom (около 0.000005 SOL - меньше 0.00001)
+    const FEE = 0.0001;
+
+    if (requestedAmount <= FEE) {
+      return {
+        withdrawAmount: 0,
+        fee: FEE,
+        canWithdraw: false,
+        message: `Минимальная сумма для вывода: ${(FEE + 0.000001).toFixed(6)} SOL`
+      };
+    }
+
+    // Выводим на комиссию меньше
+    const withdrawAmount = requestedAmount - FEE;
+
+    return {
+      withdrawAmount,
+      fee: FEE,
+      canWithdraw: true,
+      message: `Будет выведено: ${withdrawAmount.toFixed(6)} SOL (остаток ${FEE.toFixed(6)} SOL на комиссию)`
+    };
+  };
+
+  // Вывод из копилки (исправленная версия - выводим меньше чем запрашиваем)
   const handleWithdraw = async () => {
     try {
       if (!walletConnected || !walletAddress) {
         alert('Пожалуйста, подключите кошелек');
         return;
       }
-      
-      const amount = parseFloat(withdrawAmount);
-      if (!amount || amount <= 0 || amount > vaultBalance) {
+
+      const requestedAmount = parseFloat(withdrawAmount);
+      if (!requestedAmount || requestedAmount <= 0) {
         alert('Введите корректную сумму');
         return;
       }
-      
+
+      if (requestedAmount > vaultBalance) {
+        alert(`Недостаточно средств в копилке\n` +
+          `Запрошено: ${requestedAmount.toFixed(6)} SOL\n` +
+          `Доступно: ${vaultBalance.toFixed(6)} SOL`);
+        return;
+      }
+
+      // Рассчитываем сумму с учетом комиссии
+      const withdrawInfo = calculateWithdrawAmountWithFee(requestedAmount);
+
+      if (!withdrawInfo.canWithdraw) {
+        alert(withdrawInfo.message);
+        return;
+      }
+
+      // Проверяем, что пользователь понимает, что получит меньше
+      const confirmMessage = `Вы уверены, что хотите вывести ${requestedAmount.toFixed(6)} SOL?\n\n` +
+        `${withdrawInfo.message}\n\n` +
+        `Продолжить?`;
+
+      if (!window.confirm(confirmMessage)) {
+        return;
+      }
+
       setIsWalletLoading(true);
-      
-      const result = await contractService.withdraw(walletAddress, amount);
-      
+
+      // Выводим сумму за вычетом комиссии
+      const actualAmount = withdrawInfo.withdrawAmount;
+      const result = await contractService.withdraw(walletAddress, actualAmount);
+
       // Обновляем балансы
       await updateBalances(walletAddress);
-      
+
       // Сбрасываем поле ввода
       setWithdrawAmount('');
-      
-      alert(`✅ Успешно выведено ${amount} SOL\nТранзакция: ${result.transaction}`);
-      
+
+      alert(`✅ Успешно выведено ${actualAmount.toFixed(6)} SOL\n` +
+        `Комиссия: ${withdrawInfo.fee.toFixed(6)} SOL\n` +
+        `Транзакция: ${result.transaction}`);
+
     } catch (error) {
       console.error('Ошибка вывода:', error);
       alert('Ошибка при выводе: ' + error.message);
@@ -221,21 +301,21 @@ const HomePage = () => {
         alert('Пожалуйста, подключите кошелек');
         return;
       }
-      
+
       setIsWalletLoading(true);
-      
+
       const result = await contractService.createVault(walletAddress);
-      
+
       // Получаем информацию о копилке
       const vaultInfo = await contractService.getVaultInfo(walletAddress);
       if (vaultInfo) {
         setVaultBalance(vaultInfo.balance);
         setVaultAddress(vaultInfo.vaultAddress);
       }
-      
+
       alert(`✅ Копилка создана!\nАдрес: ${result.vaultAddress}`);
-      
-      
+
+
     } catch (error) {
       console.error('Ошибка создания копилки:', error);
       alert('Ошибка при создании копилки: ' + error.message);
@@ -288,11 +368,11 @@ const HomePage = () => {
       // Сохраняем accessToken и информацию о пользователе
       authApi.saveAccessToken(response.accessToken);
       authApi.saveUser(response.user);
-     
+
 
       // Перезагружаем страницу для обновления Layout
       window.location.reload();
-      
+
     } catch (error) {
       console.error('Auth error:', error);
       setErrorMessage(error.message || 'Произошла ошибка. Пожалуйста, попробуйте снова.');
@@ -330,7 +410,7 @@ const HomePage = () => {
   // Если пользователь авторизован, показываем главную страницу
   if (isAuthenticated) {
     const user = authApi.getUser();
-    
+
     return (
       <div className="home-container">
         {/* <header className="header">
@@ -362,10 +442,10 @@ const HomePage = () => {
                 <p className="wallet-status">Кошелек не подключен</p>
               )}
             </div>
-            
+
             <div className="wallet-actions">
               {!walletConnected ? (
-                <button 
+                <button
                   onClick={handleConnectWallet}
                   className={`connect-wallet-button ${!phantomAvailable ? 'disabled' : ''}`}
                   disabled={isWalletLoading || !phantomAvailable}
@@ -373,7 +453,7 @@ const HomePage = () => {
                   {isWalletLoading ? 'Подключение...' : 'Подключить Phantom'}
                 </button>
               ) : (
-                <button 
+                <button
                   onClick={handleDisconnectWallet}
                   className="disconnect-button"
                   disabled={isWalletLoading}
@@ -394,7 +474,7 @@ const HomePage = () => {
               <div className="balance-card wallet-balance">
                 <h4>Баланс кошелька</h4>
                 <p className="balance-amount">{walletBalance.toFixed(4)} SOL</p>
-                <button 
+                <button
                   onClick={() => updateBalances(walletAddress)}
                   className="refresh-button"
                   disabled={isWalletLoading}
@@ -402,7 +482,7 @@ const HomePage = () => {
                   <span className="refresh-icon">🔄</span> Обновить
                 </button>
               </div>
-              
+
               <div className="balance-card vault-balance">
                 <h4>Баланс копилки</h4>
                 <p className="balance-amount">{vaultBalance.toFixed(4)} SOL</p>
@@ -411,7 +491,7 @@ const HomePage = () => {
                     <small className="vault-address">
                       Адрес: {formatAddress(vaultAddress)}
                     </small>
-                    <button 
+                    <button
                       onClick={() => navigator.clipboard.writeText(vaultAddress)}
                       className="copy-button"
                       title="Скопировать адрес"
@@ -428,13 +508,13 @@ const HomePage = () => {
           {walletConnected && (
             <div className="vault-management-section">
               <h3 className="section-title">Управление копилкой</h3>
-              
+
               {!vaultAddress ? (
                 <div className="create-vault-container">
                   <p className="vault-description">
                     Создайте копилку для безопасного хранения SOL и получения достижений
                   </p>
-                  <button 
+                  <button
                     onClick={handleCreateVault}
                     className="create-vault-button"
                     disabled={isWalletLoading}
@@ -457,7 +537,7 @@ const HomePage = () => {
                         className="amount-input"
                         disabled={isWalletLoading}
                       />
-                      <button 
+                      <button
                         onClick={handleDeposit}
                         className="action-button deposit-button"
                         disabled={isWalletLoading || !depositAmount}
@@ -469,7 +549,7 @@ const HomePage = () => {
                       Доступно: {walletBalance.toFixed(4)} SOL
                     </small>
                   </div>
-                  
+
                   <div className="withdraw-control control-group">
                     <h4>Вывести из копилки</h4>
                     <div className="input-group">
@@ -484,7 +564,7 @@ const HomePage = () => {
                         className="amount-input"
                         disabled={isWalletLoading}
                       />
-                      <button 
+                      <button
                         onClick={handleWithdraw}
                         className="action-button withdraw-button"
                         disabled={isWalletLoading || !withdrawAmount}
@@ -501,37 +581,37 @@ const HomePage = () => {
             </div>
           )}
 
-          
-          
+
+
           <section className="features-section">
             <h3 className="section-title">Доступные функции:</h3>
             <div className="features-grid">
-              <div className="feature-card">                
-                  <div className="feature-icon">📊</div>
-                  <h4>Достижения</h4>
-                  <p>Просмотр достижений и аналитических данных</p>                
+              <div className="feature-card">
+                <div className="feature-icon">📊</div>
+                <h4>Достижения</h4>
+                <p>Просмотр достижений и аналитических данных</p>
               </div>
-              
-              <div className="feature-card">                
-                  <div className="feature-icon">📉</div>
-                  <h4>Снятие</h4>
-                  <p>Снятие денег со счета копилки</p>                
+
+              <div className="feature-card">
+                <div className="feature-icon">📉</div>
+                <h4>Снятие</h4>
+                <p>Снятие денег со счета копилки</p>
               </div>
-              
-              <div className="feature-card">                
-                  <div className="feature-icon">💲</div>
-                  <h4>Пополнение</h4>
-                  <p>Настройка автоматического пополнения и ручное пополнение счета копилки</p>                
+
+              <div className="feature-card">
+                <div className="feature-icon">💲</div>
+                <h4>Пополнение</h4>
+                <p>Настройка автоматического пополнения и ручное пополнение счета копилки</p>
               </div>
-              
-              <div className="feature-card">                
-                  <div className="feature-icon">📈</div>
-                  <h4>Цели</h4>
-                  <p>Создание и отслеживание целей</p>                
+
+              <div className="feature-card">
+                <div className="feature-icon">📈</div>
+                <h4>Цели</h4>
+                <p>Создание и отслеживание целей</p>
               </div>
             </div>
           </section>
-          
+
           {/* Информация о Solana */}
           <div className="info-section">
             <h3 className="section-title">Информация о Solana</h3>
@@ -542,14 +622,14 @@ const HomePage = () => {
               <li>✅ Интеграция со смарт-контрактами</li>
               <li>✅ Поддержка множества dApps</li>
             </ul>
-            
+
             {!phantomAvailable && (
               <div className="phantom-install">
                 <h4>Установите Phantom кошелек</h4>
                 <p>Для работы с SaveChain необходимо установить Phantom кошелек</p>
-                <a 
-                  href="https://phantom.app/" 
-                  target="_blank" 
+                <a
+                  href="https://phantom.app/"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="install-button"
                 >
@@ -570,12 +650,12 @@ const HomePage = () => {
         <div className="auth-header">
           <h1>{isRegisterMode ? 'Регистрация' : 'Вход'}</h1>
           <p className="auth-subtitle">
-            {isRegisterMode 
-              ? 'Создайте новый аккаунт' 
+            {isRegisterMode
+              ? 'Создайте новый аккаунт'
               : 'Войдите в свой аккаунт'}
           </p>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="auth-form">
           <div className="form-group">
             <label htmlFor="login">Логин</label>
@@ -589,7 +669,7 @@ const HomePage = () => {
               disabled={isLoading}
             />
           </div>
-          
+
           <div className="form-group">
             <label htmlFor="password">Пароль</label>
             <input
@@ -602,7 +682,7 @@ const HomePage = () => {
               disabled={isLoading}
             />
           </div>
-          
+
           {isRegisterMode && (
             <div className="form-group">
               <label htmlFor="confirmPassword">Подтвердите пароль</label>
@@ -617,28 +697,28 @@ const HomePage = () => {
               />
             </div>
           )}
-          
+
           {errorMessage && (
             <div className="error-message">{errorMessage}</div>
           )}
-          
-          <button 
-            type="submit" 
+
+          <button
+            type="submit"
             className="submit-button"
             disabled={isLoading}
           >
             {isLoading ? 'Загрузка...' : (isRegisterMode ? 'Зарегистрироваться' : 'Войти')}
           </button>
         </form>
-        
+
         <div className="auth-footer">
           <p>
-            {isRegisterMode 
-              ? 'Уже есть аккаунт?' 
+            {isRegisterMode
+              ? 'Уже есть аккаунт?'
               : 'Еще нет аккаунта?'}
-            <button 
-              type="button" 
-              onClick={toggleMode} 
+            <button
+              type="button"
+              onClick={toggleMode}
               className="mode-toggle"
               disabled={isLoading}
             >
