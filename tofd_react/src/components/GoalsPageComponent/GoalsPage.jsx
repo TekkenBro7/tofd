@@ -46,7 +46,7 @@ const GoalsPage = () => {
   // Загрузка статистики пользователя
   const fetchUserStats = async () => {
     try {
-      const stats = await makeAuthenticatedRequest('/api/stats');
+      const stats = await makeAuthenticatedRequest('/stats');
       if (stats) {
         setUserStats(stats);
       }
@@ -144,7 +144,7 @@ const GoalsPage = () => {
   // Функция для расчета суммы с учетом комиссии (выводим меньше чем есть)
   const calculateWithdrawAmountWithFee = (balance, isFullWithdraw = true) => {
     // Комиссия Phantom (около 0.000005 SOL - меньше 0.00001)
-    const FEE = 0.000005;
+    const FEE = 0.00001;
 
     if (isFullWithdraw) {
       // Для полного вывода (отмена цели) - выводим на FEE меньше
@@ -234,7 +234,7 @@ const GoalsPage = () => {
       const result = await contractService.withdraw(walletAddress, amount);
 
       // Отправляем подпись транзакции на сервер для подтверждения снятия
-      const response = await makeAuthenticatedRequest('/api/sync/withdraw', {
+      const response = await makeAuthenticatedRequest('/sync/withdraw', {
         method: 'POST',
         body: JSON.stringify({
           signature: result.transaction
@@ -322,7 +322,7 @@ const GoalsPage = () => {
       const result = await contractService.withdraw(walletAddress, amount);
 
       // Отправляем подпись транзакции на сервер
-      const response = await makeAuthenticatedRequest('/api/sync/withdraw', {
+      const response = await makeAuthenticatedRequest('/sync/withdraw', {
         method: 'POST',
         body: JSON.stringify({
           signature: result.transaction
@@ -462,46 +462,7 @@ const GoalsPage = () => {
           </div>
         )}
 
-        {/* Статистика пользователя */}
-        <div className="user-stats" style={{
-          background: 'white',
-          padding: '20px',
-          borderRadius: '15px',
-          marginBottom: '25px',
-          boxShadow: '0 5px 15px rgba(0,0,0,0.1)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center'
-        }}>
-          <div>
-            <h3 style={{ color: '#2d3748', marginBottom: '5px' }}>Ваш рейтинг</h3>
-            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#667eea' }}>
-              {userStats.rating} очков
-            </div>
-          </div>
-
-          <div>
-            <h3 style={{ color: '#2d3748', marginBottom: '5px' }}>Достижения</h3>
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              {userStats.achievements && userStats.achievements.length > 0 ? (
-                userStats.achievements.map((ach, index) => (
-                  <span key={index} style={{
-                    background: '#f0f9ff',
-                    color: '#3182ce',
-                    padding: '5px 10px',
-                    borderRadius: '20px',
-                    fontSize: '12px',
-                    fontWeight: '600'
-                  }}>
-                    {ach}
-                  </span>
-                ))
-              ) : (
-                <span style={{ color: '#a0aec0' }}>Пока нет достижений</span>
-              )}
-            </div>
-          </div>
-        </div>
+        
 
         {goal ? (
           <div className="goals-list">

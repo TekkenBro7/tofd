@@ -167,7 +167,7 @@ const HomePage = () => {
 
       // Отправляем подпись транзакции на сервер для синхронизации
       try {
-        const syncResponse = await makeAuthenticatedRequest('/api/sync/deposit', {
+        const syncResponse = await makeAuthenticatedRequest('/sync/deposit', {
           method: 'POST',
           body: JSON.stringify({
             signature: result.transaction
@@ -210,7 +210,7 @@ const HomePage = () => {
   // Функция для расчета суммы с учетом комиссии (выводим меньше чем запрашиваем)
   const calculateWithdrawAmountWithFee = (requestedAmount) => {
     // Комиссия Phantom (около 0.000005 SOL - меньше 0.00001)
-    const FEE = 0.000005;
+    const FEE = 0.0001;
 
     if (requestedAmount <= FEE) {
       return {
